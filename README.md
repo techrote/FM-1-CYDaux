@@ -19,6 +19,8 @@ now. Successful builds publish downloadable artifacts in
 
 These are actual 320×240 frames from the shared renderer, not hardware photos.
 
+**Documentation:** [start here — complete project handbook](docs/README.md), [owner's field guide](docs/owner-guide.md), [exact-build downloads and evidence](docs/delivery-001.md), and [troubleshooting](docs/troubleshooting.md).
+
 ## The firmware shortlist
 
 | Profile | Why it is included | Connection | Implemented scope |
@@ -111,6 +113,7 @@ python flash.py --check
 python flash.py --port COM5
 ```
 
+Back up any existing CYD application/configuration you need to recover before installing; the flasher replaces the application and partition table and is not a backup tool.
 Replace `COM5` with the **CYD's** actual serial port. The package verifies its
 images and targets the original ESP32. This writes the CYD application; it
 does not flash the FM-1. See [the flash guide](docs/flash-package.md) for Linux,

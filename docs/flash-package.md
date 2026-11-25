@@ -7,6 +7,8 @@ the M-VAVE FM-1 keeps its own separately installed firmware.
 
 ## Flash from Windows or Linux
 
+Before installation, confirm the board marking and preserve any existing CYD application/settings you need to recover. Installation writes the bootloader, partition table and application; the provided script is not a backup tool. Do not point it at the FM-1.
+
 Extract the whole package. Use Python 3.11 and a USB data cable to the CYD.
 Open a terminal in this directory. On Windows, `py` may be used for `python`.
 
