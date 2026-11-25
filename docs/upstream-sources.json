@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "audited_at_utc": "2026-11-25",
+  "method": "GitHub connector: resolve main once, inspect immutable source blobs",
+  "qualification": "source-audited; no physical FM-1 or CYD radio qualification",
+  "implementation": "Original interoperability code; upstream firmware source is not vendored",
+  "profiles": [
+    {
+      "id": "melodee",
+      "repository": "keremimo/melodee",
+      "commit": "165d177a425944f3d30b0b669255a6ed0050c3a5",
+      "version": "1.6.1",
+      "default_human_channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "implemented_control_ccs": [
+        74,
+        71,
+        73,
+        72,
+        7,
+        10,
+        75,
+        5
+      ],
+      "independent_mix_cc": 7,
+      "direct_ble": true,
+      "program_change": false,
+      "plain_start_stop_without_clock": false,
+      "sloop_live": null,
+      "scope": "Audited static performance controls",
+      "files": [
+        {
+          "path": "firmware/src/midi_control.c",
+          "blob_sha": "67e535287656c46c44c380e924ce79c23231f110",
+          "url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/firmware/src/midi_control.c"
+        },
+        {
+          "path": "firmware/src/midi_knobs.c",
+          "blob_sha": "70235401c691530c2d0a79898b26cb0215f5a0b1",
+          "url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/firmware/src/midi_knobs.c"
+        },
+        {
+          "path": "firmware/src/midi_clock.c",
+          "blob_sha": "00d514fa9c3c873c352a883142a79bf5d275adb1",
+          "url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/firmware/src/midi_clock.c"
+        },
+        {
+          "path": "firmware/src/seq.c",
+          "blob_sha": "960015a30ab9d07b71909fa3b4150f2943ccd976",
+          "url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/firmware/src/seq.c"
+        },
+        {
+          "path": "docs/BLE_MIDI.md",
+          "blob_sha": "63d550428f827125a37ae5125bcfe7f01eee912b",
+          "url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/docs/BLE_MIDI.md"
+        }
+      ]
+    },
+    {
+      "id": "sloop",
+      "repository": "isod89/sloop-fm1",
+      "commit": "bac9c05ea7627449405aa10e48da21d75b6c8c56",
+      "version": "2.8.5",
+      "default_human_channels": [
+        1,
+        2,
+        3,
+        10
+      ],
+      "implemented_control_ccs": [
+        74,
+        71,
+        73,
+        72,
+        7,
+        10,
+        91,
+        94
+      ],
+      "independent_mix_cc": 7,
+      "direct_ble": false,
+      "program_change": true,
+      "plain_start_stop_without_clock": false,
+      "sloop_live": {
+        "minimum_reported_protocol": 12,
+        "minimum_release": "2.7",
+        "current_state_bytes_after_operation": 49,
+        "current_complete_frame_bytes": 56,
+        "implemented_operations": [
+          0,
+          1
+        ],
+        "allowed_play_arguments": [
+          0,
+          1
+        ]
+      },
+      "scope": "Audited static performance controls",
+      "files": [
+        {
+          "path": "firmware/src/editor.c",
+          "blob_sha": "8c70a413ad93b51b7f4c60a0ca9067c694a4b7fe",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/editor.c"
+        },
+        {
+          "path": "firmware/src/editor_live.c",
+          "blob_sha": "fb78f9b422bd4593a3811aa062436e58058b2101",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/editor_live.c"
+        },
+        {
+          "path": "firmware/src/core.h",
+          "blob_sha": "e6b875c0701da1264d60500294a2eac221d6b821",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/core.h"
+        },
+        {
+          "path": "firmware/src/seq.c",
+          "blob_sha": "379606c94bf2cbe2fa8ed2bcc909b22891f32782",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/seq.c"
+        },
+        {
+          "path": "firmware/src/params.c",
+          "blob_sha": "6e261464403074622db23b35b79aa11e65f88826",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/params.c"
+        },
+        {
+          "path": "firmware/src/ui.c",
+          "blob_sha": "5d33b9797ea3075249fc791de881662ed63f12fa",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/firmware/src/ui.c"
+        },
+        {
+          "path": "web/EDITOR_PROTOCOL.md",
+          "blob_sha": "d4da9f2710ec3ad26520582867eef4ab75a2a434",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/web/EDITOR_PROTOCOL.md"
+        },
+        {
+          "path": "tests/ui_pages_test.c",
+          "blob_sha": "086d8feb34aae5b7607b764163a6b62c5f5e4b42",
+          "url": "https://github.com/isod89/sloop-fm1/blob/bac9c05ea7627449405aa10e48da21d75b6c8c56/tests/ui_pages_test.c"
+        }
+      ]
+    },
+    {
+      "id": "skiff",
+      "repository": "illuminus5/skiff",
+      "commit": "5eab213620248b3af99eeeea30900fc6266128c4",
+      "version": "2.7.1",
+      "default_human_channels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "implemented_control_ccs": [
+        74,
+        71,
+        73,
+        72,
+        7,
+        10,
+        91,
+        94
+      ],
+      "independent_mix_cc": 7,
+      "direct_ble": false,
+      "program_change": true,
+      "plain_start_stop_without_clock": false,
+      "sloop_live": null,
+      "scope": "Audited static performance controls",
+      "files": [
+        {
+          "path": "firmware/src/midi_control.c",
+          "blob_sha": "06508cb9fb78700be69b3539bd85d771e7a5a090",
+          "url": "https://github.com/illuminus5/skiff/blob/5eab213620248b3af99eeeea30900fc6266128c4/firmware/src/midi_control.c"
+        },
+        {
+          "path": "firmware/src/midi_clock.c",
+          "blob_sha": "9329101e83aea206a6c49741173f18a6d47fb85b",
+          "url": "https://github.com/illuminus5/skiff/blob/5eab213620248b3af99eeeea30900fc6266128c4/firmware/src/midi_clock.c"
+        },
+        {
+          "path": "firmware/src/seq.c",
+          "blob_sha": "7fef7f78baba8de97c832a055d26865a4e62255d",
+          "url": "https://github.com/illuminus5/skiff/blob/5eab213620248b3af99eeeea30900fc6266128c4/firmware/src/seq.c"
+        },
+        {
+          "path": "firmware/src/core.h",
+          "blob_sha": "4104f1859be28c731feb7ba6748de170407106e5",
+          "url": "https://github.com/illuminus5/skiff/blob/5eab213620248b3af99eeeea30900fc6266128c4/firmware/src/core.h"
+        },
+        {
+          "path": "web/EDITOR_PROTOCOL.md",
+          "blob_sha": "c177b9953458aae00488b3ae266b792fd2f8f1d8",
+          "url": "https://github.com/illuminus5/skiff/blob/5eab213620248b3af99eeeea30900fc6266128c4/web/EDITOR_PROTOCOL.md"
+        }
+      ]
+    },
+    {
+      "id": "x0x",
+      "repository": "charlesvestal/fm1-x0x",
+      "commit": "6515e77d978c23414c80162558532f0b4312dd4f",
+      "version": "source pin 6515e77 (release not inferred)",
+      "default_human_channels": [
+        2,
+        3
+      ],
+      "implemented_control_ccs": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "independent_mix_cc": 7,
+      "direct_ble": false,
+      "program_change": false,
+      "plain_start_stop_without_clock": true,
+      "sloop_live": null,
+      "scope": "303 A and 303 B only",
+      "files": [
+        {
+          "path": "firmware/src/app/midicc.c",
+          "blob_sha": "f50b48c379340a5867c2bc6c68aee48f7ac419a8",
+          "url": "https://github.com/charlesvestal/fm1-x0x/blob/6515e77d978c23414c80162558532f0b4312dd4f/firmware/src/app/midicc.c"
+        },
+        {
+          "path": "firmware/src/app/engine.c",
+          "blob_sha": "e7188ffd8c0f563a708807dd8d3e60b3c124389d",
+          "url": "https://github.com/charlesvestal/fm1-x0x/blob/6515e77d978c23414c80162558532f0b4312dd4f/firmware/src/app/engine.c"
+        },
+        {
+          "path": "firmware/src/app/editor.c",
+          "blob_sha": "f6c373ff5ec215ed07b534d0f1481868fb673f1d",
+          "url": "https://github.com/charlesvestal/fm1-x0x/blob/6515e77d978c23414c80162558532f0b4312dd4f/firmware/src/app/editor.c"
+        },
+        {
+          "path": "docs/MANUAL.md",
+          "blob_sha": "b647fe372f1c04afe22f14e5a29ae37d24d9423e",
+          "url": "https://github.com/charlesvestal/fm1-x0x/blob/6515e77d978c23414c80162558532f0b4312dd4f/docs/MANUAL.md"
+        },
+        {
+          "path": "web/EDITOR_PROTOCOL.md",
+          "blob_sha": "853f6a87f9a595773526625252914bd593b1b704",
+          "url": "https://github.com/charlesvestal/fm1-x0x/blob/6515e77d978c23414c80162558532f0b4312dd4f/web/EDITOR_PROTOCOL.md"
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "Channel and CC-learn settings on the instrument can override the defaults.",
+    "Tone, resonance, and envelope behavior depends on the selected synth engine.",
+    "Successful MIDI transmission is not a device parameter acknowledgement.",
+    "SLOOP's protocol documentation says 50 bytes after op; the serializer and upstream tests emit 50 including op.",
+    "SLOOP's INFO name is FELUCCA SLOOP plus the release, not the USB port name.",
+    "X0X's EDITOR_PROTOCOL.md is inherited; executable handlers take precedence.",
+    "Melodee and Skiff need external clock pulses for their incoming realtime transport; this project does not generate clock."
+  ]
+}
