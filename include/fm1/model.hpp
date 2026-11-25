@@ -28,6 +28,10 @@ struct UiModel {
     uint8_t controlBank = 0;
     uint8_t program = 0, note = 60, velocity = 100;
     uint8_t xyX = 64, xyY = 64;
+    ValueOrigin xyOriginX = ValueOrigin::Unknown, xyOriginY = ValueOrigin::Unknown;
+    const char* xyLabelX = "X";
+    const char* xyLabelY = "Y";
+    bool xyEnabled = true;
     bool noteHeld = false, playing = false, playingKnown = false;
     bool mockPeer = false, bleSupported = false, syncSupported = false;
     bool transportSupported = false, programSupported = false;

@@ -20,7 +20,7 @@ public:
     bool takePlatformAction(UiAction&);
 private:
     struct Value { int16_t value = -1; ValueOrigin origin = ValueOrigin::Unknown; };
-    static constexpr std::size_t kQueueSize = 24;
+    static constexpr std::size_t kQueueSize = 40;
     UiModel model_{};
     std::array<std::array<Value, kProfileControls>, kMaxTracks> values_{};
     std::array<Value, kMaxTracks> levels_{};
@@ -34,6 +34,10 @@ private:
     bool editorConfirmed_ = false;
     uint8_t heldChannel_ = 1, heldNote_ = 60;
     bool heldSent_ = false;
+    uint16_t touchedChannels_ = 0;
+    int pendingCommand_ = -1, pendingOperation_ = -1;
+    bool pendingSent_ = false;
+    uint32_t requestSentAt_ = 0;
     bool active() const;
     void rebuild();
     void resetValues();
@@ -42,5 +46,8 @@ private:
     void setParameter(std::size_t track, std::size_t parameter, int value);
     void releaseNote();
     void panic();
+    void discardPending();
+    void releaseChannels(uint16_t mask);
+    bool requestEditor(const MidiMessage&);
 };
 } // namespace fm1

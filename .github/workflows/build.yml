@@ -1,0 +1,83 @@
+name: Build and qualify
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    name: Native tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            binary: build/fm1-simulator
+          - os: windows-latest
+            platform: windows
+            binary: build/fm1-simulator.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      FM1_CYD_SIMULATOR: ${{ matrix.binary }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Compile shared controller, UI and simulator
+        run: cmake --build build --config Release --parallel 2
+      - name: Native behavioral tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Bridge protocol, sockets and native-controller integration
+        run: python -m unittest discover -s tests/bridge -v
+      - name: Simulator HTTP and framebuffer tests
+        run: python -m unittest discover -s simulator -p "test_*.py" -v
+      - name: Frontend event integration
+        run: node simulator/test_frontend.cjs ${{ matrix.binary }}
+      - name: Flash-package integrity tests
+        run: python -m unittest discover -s tests/package -v
+      - name: Package simulator
+        run: python scripts/package.py simulator --platform ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cydaux-simulator-${{ matrix.platform }}-${{ github.sha }}
+          path: dist/cydaux-simulator-${{ matrix.platform }}/
+          if-no-files-found: error
+  firmware:
+    name: ESP32-2432S028R firmware
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned build frontend
+        run: python -m pip install platformio==6.1.18
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-cyd-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+      - name: Compile firmware for the original CYD
+        run: pio run -e cyd -j 2
+      - name: Package images, source identity and checksums
+        run: python scripts/package.py firmware
+      - name: Verify downloadable package without opening a port
+        run: python dist/cydaux-esp32-2432s028r/flash.py --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cydaux-esp32-2432s028r-${{ github.sha }}
+          path: dist/cydaux-esp32-2432s028r/
+          if-no-files-found: error

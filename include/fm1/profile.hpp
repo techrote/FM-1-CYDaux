@@ -22,6 +22,8 @@ struct Profile {
     bool sloopLive; // Also requires a SLOOP INFO protocol >= 12 reply.
     bool programChange;
     const char* setupHint;
+    // Bit i permits control i on this track; engine-specific availability can be narrower.
+    std::array<uint8_t, kMaxTracks> parameterMask{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 };
 std::size_t profileCount();
 const Profile& profileAt(std::size_t index);

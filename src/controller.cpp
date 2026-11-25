@@ -37,11 +37,19 @@ void Controller::rebuild() {
     model_.trackNames=p.trackNames; model_.midiChannel=channels_[model_.trackIndex];
     model_.bleSupported=p.directBle; model_.programSupported=p.programChange;
     model_.transportSupported=model_.transport==TransportKind::Demo ||
-                              (active() && (p.transport || model_.syncSupported));
+                              (active() && (p.transport || (model_.syncSupported && model_.playingKnown)));
+    model_.xyLabelX=p.parameters[0].name; model_.xyLabelY=p.parameters[1].name;
+    model_.xyEnabled=active() && (p.parameterMask[model_.trackIndex]&3)==3;
+    const auto& x=values_[model_.trackIndex][0];
+    const auto& y=values_[model_.trackIndex][1];
+    model_.xyX=static_cast<uint8_t>(x.value<0?64:clamp7(x.value));
+    model_.xyY=static_cast<uint8_t>(y.value<0?64:clamp7(y.value));
+    model_.xyOriginX=x.origin; model_.xyOriginY=y.origin;
     for (std::size_t i=0;i<4;++i) {
         const auto parameter=i+model_.controlBank*4;
         const auto& v=values_[model_.trackIndex][parameter];
-        model_.controls[i]={p.parameters[parameter].name,v.value,v.origin,active()};
+        model_.controls[i]={p.parameters[parameter].name,v.value,v.origin,
+                            active() && ((p.parameterMask[model_.trackIndex]>>parameter)&1)};
     }
     for (std::size_t t=0;t<kMaxTracks;++t)
         model_.mix[t]={p.trackNames[t],levels_[t].value,levels_[t].origin,active()&&t<p.tracks};
@@ -51,11 +59,12 @@ void Controller::selectProfile(std::size_t index) {
     if (index>=profileCount()) return;
     const bool wasLinked=model_.connection==ConnectionState::Connected ||
                          model_.connection==ConnectionState::Connecting;
-    read_=write_=count_=0;
+    discardPending();
     releaseNote();
     model_.profileIndex=static_cast<uint8_t>(index); model_.trackIndex=0;
     model_.controlBank=0; model_.program=0; model_.playing=false; model_.playingKnown=false;
     model_.syncSupported=false; editorProtocol_=0; editorConfirmed_=false;
+    pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false;
     channels_=profileAt(index).channels;
     if (wasLinked) {
         model_.connection=ConnectionState::Offline;
@@ -75,8 +84,16 @@ bool Controller::enqueue(const MidiMessage& m) {
         }
     }
     if (count_==kQueueSize) {
-        if ((m.data[0]&0xf0)==0x80 || ((m.data[0]&0xf0)==0xb0 && m.data[1]>=120))
-            read_=write_=count_=0;
+        if ((m.data[0]&0xf0)==0x80 || ((m.data[0]&0xf0)==0xb0 && m.data[1]>=120)) {
+            uint16_t mask=touchedChannels_ | (1u<<(m.data[0]&15));
+            for (std::size_t n=0;n<count_;++n) {
+                const auto& q=outgoing_[(read_+n)%kQueueSize];
+                if ((q.data[0]&0xf0)==0x80 || (q.data[0]&0xf0)==0x90)
+                    mask|=1u<<(q.data[0]&15);
+            }
+            releaseChannels(mask);
+            return true;
+        }
         else { setNotice("MIDI queue busy; slow the controls"); return false; }
     }
     outgoing_[write_]=m; write_=(write_+1)%kQueueSize; ++count_;
@@ -91,6 +108,12 @@ bool Controller::popMidi(MidiMessage& m) {
 }
 void Controller::didSend(const MidiMessage& m) {
     ++model_.transmitted;
+    if (m.size==3 && (m.data[0]&0xf0)==0x90 && m.data[2])
+        touchedChannels_|=1u<<(m.data[0]&15);
+    if (pendingCommand_>=0 && m.size>=6 && m.data[0]==0xf0 && m.data[4]==pendingCommand_ &&
+        (pendingCommand_!=77 || m.data[5]==pendingOperation_)) {
+        pendingSent_=true; requestSentAt_=now_;
+    }
     if (m.size==3 && (m.data[0]&0xf0)==0xb0) {
         const auto& p=profileAt(model_.profileIndex);
         for (std::size_t t=0;t<p.tracks;++t) {
@@ -108,7 +131,8 @@ void Controller::didSend(const MidiMessage& m) {
 }
 void Controller::setParameter(std::size_t track,std::size_t parameter,int value) {
     const auto& p=profileAt(model_.profileIndex);
-    if (!active() || track>=p.tracks || parameter>=kProfileControls) return;
+    if (!active() || track>=p.tracks || parameter>=kProfileControls ||
+        !((p.parameterMask[track]>>parameter)&1)) return;
     value=clamp7(value);
     const auto& spec=p.parameters[parameter];
     if (model_.transport!=TransportKind::Demo && !send(0xb0|(channels_[track]-1),spec.cc,value)) return;
@@ -122,14 +146,34 @@ void Controller::releaseNote() {
     heldSent_=false; model_.noteHeld=false;
 }
 void Controller::panic() {
-    read_=write_=count_=0;
-    releaseNote();
+    uint16_t mask=touchedChannels_;
     const auto& p=profileAt(model_.profileIndex);
-    for (std::size_t t=0;t<p.tracks;++t) {
-        send(0xb0|(channels_[t]-1),64,0);
-        send(0xb0|(channels_[t]-1),123,0);
-    }
+    for (std::size_t t=0;t<p.tracks;++t) mask|=1u<<(channels_[t]-1);
+    releaseChannels(mask);
     setNotice(model_.transport==TransportKind::Demo?"Demo notes released":"Release notes requested");
+}
+void Controller::discardPending() {
+    read_=write_=count_=0;
+    for (auto& track:values_) for (auto& value:track)
+        if (value.origin==ValueOrigin::Pending) value={-1,ValueOrigin::Unknown};
+    for (auto& value:levels_)
+        if (value.origin==ValueOrigin::Pending) value={-1,ValueOrigin::Unknown};
+    if (!pendingSent_) { pendingCommand_=-1; pendingOperation_=-1; }
+}
+void Controller::releaseChannels(uint16_t mask) {
+    discardPending();
+    heldSent_=false; model_.noteHeld=false;
+    // At most32 messages fit in the40-entry queue, including every old release.
+    for (unsigned channel=0;channel<16;++channel) if (mask&(1u<<channel)) {
+        send(0xb0|channel,64,0); send(0xb0|channel,123,0);
+    }
+}
+bool Controller::requestEditor(const MidiMessage& message) {
+    if (pendingCommand_>=0 || message.size<6 || !enqueue(message)) return false;
+    pendingCommand_=message.data[4];
+    pendingOperation_=pendingCommand_==77?message.data[5]:-1;
+    pendingSent_=false;
+    return true;
 }
 void Controller::dispatch(UiAction a) {
     const auto& p=profileAt(model_.profileIndex);
@@ -157,10 +201,10 @@ void Controller::dispatch(UiAction a) {
             }
             break;
         case ActionType::SetXY:
-            if (active()) {
-                model_.xyX=clamp7(a.a); model_.xyY=clamp7(a.b);
-                setParameter(model_.trackIndex,0,model_.xyX);
-                setParameter(model_.trackIndex,1,model_.xyY);
+            if (model_.xyEnabled) {
+                const int x=clamp7(a.a),y=clamp7(a.b);
+                setParameter(model_.trackIndex,0,x);
+                setParameter(model_.trackIndex,1,y);
             }
             break;
         case ActionType::NoteOn:
@@ -174,8 +218,8 @@ void Controller::dispatch(UiAction a) {
         case ActionType::Panic: panic(); break;
         case ActionType::TogglePlay:
             if (model_.transport==TransportKind::Demo) { model_.playing=!model_.playing; model_.playingKnown=true; }
-            else if (active() && model_.syncSupported)
-                enqueue(sloopLiveRequest(1,model_.playing?0:1));
+            else if (active() && model_.syncSupported && model_.playingKnown)
+                requestEditor(sloopLiveRequest(1,model_.playing?0:1));
             else if (active() && p.transport) {
                 if (send(model_.playing?0xfc:0xfa,0,0,1)) {
                     model_.playing=!model_.playing; model_.playingKnown=false;
@@ -192,11 +236,12 @@ void Controller::dispatch(UiAction a) {
             break;
         case ActionType::SelectTransport:
             if (a.a<0 || a.a>2) break;
-            read_=write_=count_=0; releaseNote();
+            discardPending(); releaseNote();
             model_.transport=static_cast<TransportKind>(a.a);
             model_.connection=ConnectionState::Offline; model_.mockPeer=false;
             model_.playing=false; model_.playingKnown=false; model_.syncSupported=false;
             editorConfirmed_=false; editorProtocol_=0;
+            pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false;
             platformAction_=a; platformPending_=true; resetValues();
             setNotice(model_.transport==TransportKind::Demo?"Demo: no instrument needed":"Connect to control the instrument");
             break;
@@ -214,7 +259,7 @@ void Controller::dispatch(UiAction a) {
         case ActionType::Disconnect: releaseNote(); platformAction_=a; platformPending_=true; break;
         case ActionType::Configure: releaseNote(); platformAction_=a; platformPending_=true; break;
         case ActionType::Refresh:
-            if (active() && p.sloopLive && model_.transport==TransportKind::Wifi) enqueue(editorInfoRequest());
+            if (active() && p.sloopLive && model_.transport==TransportKind::Wifi) requestEditor(editorInfoRequest());
             else setNotice("Values update only when the FM-1 reports them");
             break;
         case ActionType::TempoDelta:
@@ -232,19 +277,26 @@ void Controller::setConnection(ConnectionState state,bool mockPeer,const char* d
     model_.connection=state; model_.mockPeer=mockPeer;
     read_=write_=count_=0; heldSent_=false; model_.noteHeld=false;
     model_.playingKnown=false; model_.playing=false; model_.syncSupported=false;
-    editorConfirmed_=false; editorProtocol_=0; resetValues();
+    editorConfirmed_=false; editorProtocol_=0; touchedChannels_=0;
+    pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false; resetValues();
     if (detail) setNotice(detail);
     else setNotice(state==ConnectionState::Connected?
                    (mockPeer?"Mock bridge: simulated instrument":"Connected: values await feedback"):"Disconnected");
     if (state==ConnectionState::Connected && profileAt(model_.profileIndex).sloopLive && model_.transport==TransportKind::Wifi)
-        enqueue(editorInfoRequest());
+        requestEditor(editorInfoRequest());
     rebuild();
 }
 void Controller::tick(uint32_t ms) {
     now_=ms;
+    if (pendingCommand_>=0 && pendingSent_ && uint32_t(ms-requestSentAt_)>=1000) {
+        pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false;
+        model_.playingKnown=false;
+        setNotice("No editor reply; controls remain available");
+        rebuild();
+    }
     if (active() && model_.transport==TransportKind::Wifi && model_.syncSupported &&
         uint32_t(ms-lastPoll_)>=250) {
-        lastPoll_=ms; enqueue(sloopLiveRequest(0));
+        if (requestEditor(sloopLiveRequest(0))) lastPoll_=ms;
     }
 }
 void Controller::receive(const uint8_t* data,std::size_t size) {
@@ -253,13 +305,17 @@ void Controller::receive(const uint8_t* data,std::size_t size) {
     const auto& p=profileAt(model_.profileIndex);
     if (data[0]==0xf0 && model_.transport==TransportKind::Wifi && p.sloopLive) {
         uint8_t version=0; bool isSloop=false;
-        if (parseEditorInfo(data,size,version,isSloop)) {
+        if (pendingCommand_==1 && pendingSent_ && parseEditorInfo(data,size,version,isSloop)) {
+            pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false;
             editorConfirmed_=isSloop; editorProtocol_=version;
             model_.syncSupported=isSloop&&version>=12;
             setNotice(model_.syncSupported?"SLOOP live sync ready":"Controller only: SLOOP v12 not confirmed");
-        } else if (editorConfirmed_ && editorProtocol_>=12) {
+            if (model_.syncSupported) requestEditor(sloopLiveRequest(0));
+        } else if (pendingCommand_==77 && pendingSent_ && editorConfirmed_ && editorProtocol_>=12 &&
+                   size>5 && data[5]==pendingOperation_) {
             SloopLiveState live;
             if (parseSloopLive(data,size,live)) {
+                pendingCommand_=-1; pendingOperation_=-1; pendingSent_=false;
                 model_.playing=live.playing; model_.playingKnown=true; model_.bpm=live.bpm;
             }
         }
