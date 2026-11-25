@@ -166,6 +166,10 @@ class UsbMidi:
                 raise EndpointUnavailable(f"MIDI output unavailable: {self.output_name}")
             if self.input_name and self.input_name not in inputs:
                 raise EndpointUnavailable(f"MIDI input unavailable: {self.input_name}")
+            if outputs.count(self.output_name) != 1:
+                raise EndpointUnavailable("MIDI output name is ambiguous; select a uniquely named port")
+            if self.input_name and inputs.count(self.input_name) != 1:
+                raise EndpointUnavailable("MIDI input name is ambiguous; select a uniquely named port")
             if self.connected:
                 if self._output.closed or (self._input is not None and self._input.closed):
                     raise EndpointUnavailable("MIDI port closed; waiting to reconnect")

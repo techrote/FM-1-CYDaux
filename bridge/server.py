@@ -163,9 +163,16 @@ class BridgeServer:
         client.outgoing.extend(encoded)
 
     def _accept(self, now: float) -> None:
-        connection, _address = self.listener.accept()
-        connection.setblocking(False)
-        connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        try:
+            connection, _address = self.listener.accept()
+        except (BlockingIOError, ConnectionAbortedError):
+            return
+        try:
+            connection.setblocking(False)
+            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except OSError:
+            connection.close()
+            return
         if self.client is not None:
             try:
                 connection.send(encode_frame({"type": "error", "message": "Another controller is connected"}))
@@ -202,6 +209,8 @@ class BridgeServer:
             if self.client is not None:
                 client.session.closing = True
                 client.close_at = now + 0.25
+        except BlockingIOError:
+            return
         except (ConnectionError, OSError):
             self._drop("socket read failed")
 

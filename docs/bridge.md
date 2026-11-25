@@ -69,7 +69,8 @@ You can omit `--input` for control only. SLOOP INFO/LIVE readback needs the inpu
 port. The names are deliberately placeholders here: no FM-1 has been attached in
 this development environment, so an actual Windows/Linux port name is not claimed.
 
-The bridge never chooses the first available device. If a named port disappears,
+The bridge never chooses the first available device. Duplicate exact port names
+are rejected as ambiguous. If a named port disappears,
 it reports `ready:false` and checks every two seconds for **the same exact name**.
 Commands attempted while the port is unavailable produce an error and are
 discarded. They are not replayed on reconnect. On Linux, MIDI names can include
@@ -86,6 +87,14 @@ automatically written back to MIDI.
 `--profile sloop|skiff|melodee|x0x` chooses the mock profile. The optional network
 `profile` frame changes mock behavior; in real MIDI mode it is metadata only.
 Neither operation changes the firmware installed on an FM-1.
+
+The profile-aware mock accepts the qualified musical controls but does not echo
+CCs as fake device confirmations. Unsupported mock CCs and program changes
+produce an error. SLOOP answers the audited INFO request and 56-byte LIVE replies
+with simulated transport and playhead state. It identifies its source fixture as
+`FELUCCA SLOOP 2.8.5`, with editor protocol 12, while the enclosing connection is
+always labelled `mock`. INFO is not a real-device identity claim. Meters remain
+zero because the mock generates no audio. Other profiles remain controller-only.
 
 The bridge does not infer that an instrument accepted a command because a USB
 write succeeded. It sends no success acknowledgement for a MIDI frame. Real

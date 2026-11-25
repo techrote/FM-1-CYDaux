@@ -7,7 +7,8 @@ import logging
 import os
 import secrets
 
-from .midi_io import EndpointUnavailable, MockMidi, UsbMidi, load_mido
+from .midi_io import EndpointUnavailable, UsbMidi, load_mido
+from .mock import DemoMidi
 from .protocol import DEFAULT_PORT
 from .server import BridgeServer, PROFILES
 
@@ -44,10 +45,10 @@ def main(argv: list[str] | None = None) -> int:
         if not args.demo and not args.output:
             parser.error("select --demo or an explicit --output port (use --list)")
         token = args.token or secrets.token_urlsafe(24)
-        endpoint = MockMidi() if args.demo else UsbMidi(args.output, args.input)
+        endpoint = DemoMidi(args.profile) if args.demo else UsbMidi(args.output, args.input)
         server = BridgeServer(endpoint, token, bind=args.bind, port=args.port,
                               mode="mock" if args.demo else "midi", profile=args.profile)
-        mode = "MOCK FM-1 — simulated responses, no instrument attached" if args.demo else "USB MIDI"
+        mode = "MOCK FM-1 (simulated responses, no instrument attached)" if args.demo else "USB MIDI"
         print(f"FM-1 CYD bridge: {mode}", flush=True)
         print(f"Listening on {server.address[0]}:{server.address[1]}", flush=True)
         print(f"Connection token: {token}", flush=True)

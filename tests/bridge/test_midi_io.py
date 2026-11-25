@@ -88,6 +88,13 @@ class UsbMidiTests(unittest.TestCase):
         with self.assertRaises(EndpointUnavailable):
             self.endpoint.send([0xB0, 7, 20])
 
+    def test_duplicate_exact_names_do_not_silently_pick_the_first_device(self):
+        self.mido.outputs = ["FM-1 OUT", "FM-1 OUT"]
+        self.endpoint.tick(0)
+        self.assertFalse(self.endpoint.connected)
+        self.assertEqual(self.mido.output_opened, [])
+        self.assertIn("ambiguous", self.endpoint.detail)
+
     def test_reconnects_only_to_same_port_without_replaying_failed_command(self):
         self.endpoint.tick(0)
         old_port = self.mido.output
