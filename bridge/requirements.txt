@@ -1,0 +1,3 @@
+# Optional: only required for a real USB MIDI port. Demo mode is stdlib-only.
+mido>=1.3,<2
+python-rtmidi>=1.5,<2

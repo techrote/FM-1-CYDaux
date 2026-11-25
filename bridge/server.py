@@ -1,0 +1,272 @@
+"""Single-controller TCP server; musical messages are never replayed."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import logging
+import secrets
+import select
+import socket
+import time
+from typing import Any
+
+from .midi_io import EndpointUnavailable, validate_midi_bytes
+from .protocol import DEFAULT_PORT, PROTOCOL_VERSION, LineDecoder, ProtocolError, encode_frame
+
+
+LOG = logging.getLogger("fm1cyd.bridge")
+CLIENT_TIMEOUT = 6.0
+MAX_OUTGOING_BYTES = 16 * 1024
+PROFILES = frozenset(("sloop", "skiff", "melodee", "x0x"))
+
+
+@dataclass
+class Session:
+    endpoint: Any
+    token: str
+    mode: str
+    profile: str
+    name: str = "Demo FM-1"
+    authenticated: bool = False
+    closing: bool = False
+    channels: set[int] = field(default_factory=set)
+
+    def handle(self, frame: dict[str, Any]) -> list[dict[str, Any]]:
+        kind = frame.get("type")
+        if not self.authenticated:
+            supplied = frame.get("token")
+            if (kind != "hello" or type(frame.get("protocol")) is not int
+                    or frame["protocol"] != PROTOCOL_VERSION):
+                self.closing = True
+                return [{"type": "error", "message": "Expected protocol 1 hello"}]
+            try:
+                token_matches = isinstance(supplied, str) and secrets.compare_digest(
+                    supplied.encode("utf-8"), self.token.encode("utf-8"))
+            except UnicodeError:
+                token_matches = False
+            if not token_matches:
+                self.closing = True
+                return [{"type": "error", "message": "Authentication failed"}]
+            self.authenticated = True
+            return [{"type": "hello", "protocol": PROTOCOL_VERSION,
+                     "mode": self.mode, "ready": bool(self.endpoint.connected), "name": self.name}]
+
+        try:
+            if kind == "ping":
+                ping_id = frame.get("id")
+                if type(ping_id) is not int or not 0 <= ping_id <= 0xFFFFFFFF:
+                    raise ValueError("Ping id must be an integer in 0..4294967295")
+                return [{"type": "pong", "id": ping_id}]
+            if kind == "profile":
+                profile = frame.get("id")
+                if not isinstance(profile, str) or profile not in PROFILES:
+                    raise ValueError("Unknown profile")
+                self.profile = profile
+                if self.mode == "mock" and hasattr(self.endpoint, "set_profile"):
+                    self.endpoint.set_profile(profile)
+                # No MIDI command: this is metadata, never a firmware switch.
+                return []
+            if kind == "midi":
+                data = frame.get("data")
+                if not isinstance(data, list):
+                    raise ValueError("MIDI data must be an array")
+                message = validate_midi_bytes(data)
+                self.endpoint.send(message)
+                if message[0] < 0xF0:
+                    self.channels.add(message[0] & 15)
+                # No acknowledgement: successful send does not prove readback.
+                return []
+            raise ValueError("Unknown command")
+        except (ValueError, TypeError, EndpointUnavailable) as error:
+            return [{"type": "error", "message": str(error)[:300]}]
+
+    def release(self) -> None:
+        """Release only channels used by this session, without storing retries."""
+        for channel in sorted(self.channels):
+            try:
+                self.endpoint.send((0xB0 | channel, 64, 0))
+                self.endpoint.send((0xB0 | channel, 123, 0))
+            except (ValueError, EndpointUnavailable):
+                break
+        self.channels.clear()
+        self.authenticated = False
+
+
+@dataclass
+class Client:
+    socket: socket.socket
+    session: Session
+    last_frame: float
+    decoder: LineDecoder = field(default_factory=LineDecoder)
+    outgoing: bytearray = field(default_factory=bytearray)
+    close_at: float | None = None
+
+
+class BridgeServer:
+    def __init__(
+        self,
+        endpoint: Any,
+        token: str,
+        *,
+        bind: str = "127.0.0.1",
+        port: int = DEFAULT_PORT,
+        mode: str = "mock",
+        profile: str = "sloop",
+        name: str | None = None,
+        clock=time.monotonic,
+    ) -> None:
+        if mode not in ("mock", "midi") or profile not in PROFILES:
+            raise ValueError("Unknown bridge mode or profile")
+        if not token or len(token) > 128:
+            raise ValueError("Token must contain 1..128 characters")
+        self.endpoint = endpoint
+        self.token = token
+        self.mode = mode
+        self.profile = profile
+        self.name = name or ("Demo FM-1" if mode == "mock" else "FM-1 USB MIDI")
+        self.clock = clock
+        self.client: Client | None = None
+        self.closed = False
+        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.listener.bind((bind, port))
+            self.listener.listen(4)
+            self.listener.setblocking(False)
+        except Exception:
+            self.listener.close()
+            raise
+        self.address = self.listener.getsockname()
+        self._backend_state = (bool(endpoint.connected), endpoint.detail)
+
+    def _drop(self, reason: str) -> None:
+        client, self.client = self.client, None
+        if client is None:
+            return
+        # No performance bytes are carried into another connection.
+        client.outgoing.clear()
+        client.session.release()
+        try:
+            client.socket.close()
+        except OSError:
+            pass
+        LOG.info("Controller disconnected: %s", reason)
+
+    def _queue(self, frame: dict[str, Any]) -> None:
+        client = self.client
+        if client is None:
+            return
+        encoded = encode_frame(frame)
+        if len(client.outgoing) + len(encoded) > MAX_OUTGOING_BYTES:
+            self._drop("controller is not reading; bounded output queue full")
+            return
+        client.outgoing.extend(encoded)
+
+    def _accept(self, now: float) -> None:
+        connection, _address = self.listener.accept()
+        connection.setblocking(False)
+        connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        if self.client is not None:
+            try:
+                connection.send(encode_frame({"type": "error", "message": "Another controller is connected"}))
+            except OSError:
+                pass
+            connection.close()
+            return
+        self.client = Client(connection, Session(
+            self.endpoint, self.token, self.mode, self.profile, self.name,
+        ), now)
+
+    def _read(self, now: float) -> None:
+        client = self.client
+        if client is None:
+            return
+        try:
+            chunk = client.socket.recv(4096)
+            if not chunk:
+                self._drop("connection closed")
+                return
+            frames = client.decoder.feed(chunk)
+            for frame in frames:
+                client.last_frame = now
+                responses = client.session.handle(frame)
+                for response in responses:
+                    self._queue(response)
+                if self.client is None:
+                    break
+                if client.session.closing:
+                    client.close_at = now + 0.25
+                    break
+        except ProtocolError as error:
+            self._queue({"type": "error", "message": str(error)})
+            if self.client is not None:
+                client.session.closing = True
+                client.close_at = now + 0.25
+        except (ConnectionError, OSError):
+            self._drop("socket read failed")
+
+    def _write(self) -> None:
+        client = self.client
+        if client is None:
+            return
+        try:
+            sent = client.socket.send(client.outgoing)
+            if sent:
+                del client.outgoing[:sent]
+            else:
+                self._drop("socket closed during write")
+        except BlockingIOError:
+            return
+        except (ConnectionError, OSError):
+            self._drop("socket write failed")
+
+    def step(self, timeout: float = 0.01) -> None:
+        if self.closed:
+            return
+        now = self.clock()
+        self.endpoint.tick(now)
+        current_state = (bool(self.endpoint.connected), self.endpoint.detail)
+        client = self.client
+        if current_state != self._backend_state:
+            self._backend_state = current_state
+            LOG.info("MIDI endpoint: %s", current_state[1])
+            if client and client.session.authenticated:
+                self._queue({"type": "status", "ready": current_state[0], "reason": current_state[1][:300]})
+        for message in self.endpoint.receive():
+            if self.client and self.client.session.authenticated and not self.client.session.closing:
+                self._queue({"type": "midi", "data": list(message)})
+        client = self.client
+        if client and now - client.last_frame >= CLIENT_TIMEOUT:
+            self._drop("six-second controller timeout")
+        elif client and client.session.closing and (
+                not client.outgoing or (client.close_at is not None and now >= client.close_at)):
+            self._drop("protocol rejected")
+        readable = [self.listener]
+        writable = []
+        client = self.client
+        if client:
+            if not client.session.closing:
+                readable.append(client.socket)
+            if client.outgoing:
+                writable.append(client.socket)
+        reads, writes, _errors = select.select(readable, writable, [], timeout)
+        if self.listener in reads:
+            self._accept(self.clock())
+        if self.client and self.client.socket in reads:
+            self._read(self.clock())
+        if self.client and self.client.socket in writes:
+            self._write()
+
+    def serve(self, stop_event: Any = None) -> None:
+        try:
+            while not self.closed and not (stop_event and stop_event.is_set()):
+                self.step()
+        finally:
+            self.close()
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        self._drop("bridge stopped")
+        self.listener.close()
