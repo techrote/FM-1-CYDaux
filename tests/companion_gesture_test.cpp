@@ -9,6 +9,7 @@ namespace {
 struct Rig {
     fm1::Controller controller;
     fm1::VirtualInstrument engine;
+    fm1::CompanionReleaseTracker releaseTracker;
     fm1::Ui ui;
     Rig():ui(dispatch,this){}
     static void dispatch(void* context,fm1::UiAction action) {
@@ -19,6 +20,7 @@ struct Rig {
         unsigned budget=100;
         while(controller.popMidi(message)){
             assert(budget--);assert(engine.receive(message));controller.didSend(message);
+            releaseTracker.sent(message);
             while(engine.popReply(reply))controller.receive(reply.data.data(),reply.size);
         }
     }
@@ -27,6 +29,7 @@ struct Rig {
         controller.selectProfile(fm1::profileIndex(profile));
         controller.dispatch({fm1::ActionType::SelectTransport,3});
         fm1::UiAction action{fm1::ActionType::Refresh};while(controller.takePlatformAction(action)){}
+        releaseTracker.reset();
         assert(engine.select(profile));
         controller.setConnection(fm1::ConnectionState::Connected);drain();
         controller.dispatch({fm1::ActionType::SetPage,static_cast<int16_t>(fm1::Page::XY)});
@@ -112,6 +115,7 @@ void endpointLeaseLoss() {
         auto wire=command;
         if(reason==CompanionError::Version){auto packet=original;packet.major=2;wire=encodeCompanion(packet);}
         assert(!rig.engine.receive(wire));
+        rig.releaseTracker.sent(wire);
         rig.controller.didSend(command);
         assert(rig.engine.popReply(reply));
         CompanionPacket error;assert(decodeCompanion(reply.data.data(),reply.size,error));
@@ -141,12 +145,37 @@ void endpointLeaseLoss() {
         std::array<int16_t,128> silent{};assert(rig.engine.render(silent.data(),silent.size()));
         for(const auto sample:silent)assert(sample==0);
 
-        rig.controller.dispatch({ActionType::Refresh});
+        // The owner reaches recovery through the actual shared touchscreen,
+        // including when the endpoint has disabled its normal performance UI.
+        rig.ui.touch(TouchPhase::Down,295,225,rig.controller.model());
+        rig.ui.touch(TouchPhase::Up,295,225,rig.controller.model());
+        assert(rig.controller.model().page==Page::Link);
+        rig.ui.touch(TouchPhase::Down,80,177,rig.controller.model());
+        rig.ui.touch(TouchPhase::Up,80,177,rig.controller.model());
+        UiAction reconnect{ActionType::Refresh};
+        assert(rig.controller.takePlatformAction(reconnect)&&reconnect.type==ActionType::Connect);
+        assert(!rig.controller.takePlatformAction(reconnect));
+        assert(!rig.controller.popMidi(command)); // New discovery must wait for a new transport epoch.
+        assert(!rig.controller.model().companionReady);
+
+        // A transport closes the retired link with its independent release
+        // guard, then resets that guard before accepting the new discovery.
+        // The restarted peer may refuse this old-session best-effort panic.
+        const auto oldPanic=rig.releaseTracker.panicMessage();
+        CompanionPacket oldRelease;assert(decodeCompanion(oldPanic.data.data(),oldPanic.size,oldRelease));
+        assert(oldRelease.session==original.session&&oldRelease.op==CompanionOp::Panic);
+        rig.engine.receive(oldPanic);rig.releaseTracker.sent(oldPanic);
+        rig.engine.disconnect();rig.releaseTracker.reset();
+        assert(!rig.releaseTracker.panicMessage().size);
+        rig.controller.setConnection(ConnectionState::Connecting);
+        assert(rig.engine.select(profile));
+        rig.controller.setConnection(ConnectionState::Connected);
         assert(rig.controller.popMidi(command));
         CompanionPacket discovery;assert(decodeCompanion(command.data.data(),command.size,discovery));
         assert(discovery.op==CompanionOp::Discover&&discovery.session&&discovery.session!=original.session);
         assert(!rig.controller.model().companionReady);
         assert(rig.engine.receive(command));rig.controller.didSend(command);
+        rig.releaseTracker.sent(command);
         while(rig.engine.popReply(reply))rig.controller.receive(reply.data.data(),reply.size);
         rig.drain();
         assert(rig.controller.model().companionReady&&rig.controller.model().notesSupported);
@@ -157,10 +186,26 @@ void endpointLeaseLoss() {
         rig.ui.touch(TouchPhase::Move,220,70,rig.controller.model());
         rig.ui.touch(TouchPhase::Up,220,70,rig.controller.model());rig.drain();
         assert(rig.engine.snapshot().values==values&&!rig.engine.snapshot().gate);
+        rig.controller.dispatch({ActionType::SetPage,static_cast<int16_t>(Page::XY)});
         rig.ui.touch(TouchPhase::Down,90,110,rig.controller.model());rig.drain();
         assert(rig.engine.snapshot().gate);
         rig.ui.touch(TouchPhase::Up,90,110,rig.controller.model());rig.drain();
         assert(!rig.engine.snapshot().gate);
+
+        // An independent transport interruption must now release this new
+        // session, rather than sending a harmless panic in the expired lease.
+        rig.ui.touch(TouchPhase::Down,110,100,rig.controller.model());rig.drain();
+        assert(rig.engine.snapshot().gate);
+        const auto emergency=rig.releaseTracker.panicMessage();
+        CompanionPacket release;assert(decodeCompanion(emergency.data.data(),emergency.size,release));
+        assert(release.op==CompanionOp::Panic&&release.session==discovery.session);
+        assert(rig.engine.receive(emergency));rig.releaseTracker.sent(emergency);
+        assert(!rig.engine.snapshot().gate&&!rig.releaseTracker.panicMessage().size);
+        assert(rig.engine.render(silent.data(),silent.size()));
+        for(const auto sample:silent)assert(sample==0);
+        rig.engine.disconnect();rig.controller.setConnection(ConnectionState::Offline);
+        rig.ui.cancelTouch();
+        assert(!rig.controller.model().noteHeld&&!rig.controller.model().sequence.running);
     }
 }
 }

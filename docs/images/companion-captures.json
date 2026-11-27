@@ -7892,6 +7892,342 @@
         "audio 3072 <temporary>/instrument.pcm",
         "frame <temporary>/frame.ppm"
       ]
+    },
+    {
+      "file": "companion-zaaggenz-link.png",
+      "width": 320,
+      "height": 240,
+      "sha256": "086869dd2d5c9a41e6a1104dba6752ad7a8c372f396f010afa60c62168847dea",
+      "profile": "zaaggenz-native",
+      "source_version": "ac21d089+CY1",
+      "audio": {
+        "mode": "native-engine",
+        "name": "ZaaggenZ native procedural core",
+        "sourceRevision": "ac21d089e7afce6bc7adc555deb0ce90b56a39cd",
+        "sampleRate": 44100,
+        "generation": 4,
+        "clockRunning": false,
+        "frames": 0,
+        "peak": 0,
+        "rms": 0,
+        "rejected": 0,
+        "queueOverflows": 0
+      },
+      "state": {
+        "ok": true,
+        "simulated": true,
+        "firmware": "ZaaggenZ",
+        "profile": "zaaggenz-native",
+        "description": "Native procedural / six characters",
+        "sourceVersion": "ac21d089+CY1",
+        "setupHint": "Native endpoint required. Unmodified Fune has no CY discovery or these CCs.",
+        "page": 3,
+        "transport": 3,
+        "connection": 2,
+        "mockPeer": false,
+        "setupActive": false,
+        "track": 0,
+        "tracks": 1,
+        "channel": 1,
+        "program": 2,
+        "note": 60,
+        "velocity": 100,
+        "controlBank": 0,
+        "noteHeld": false,
+        "xyX": 70,
+        "xyY": 110,
+        "xyOriginX": "native-engine",
+        "xyOriginY": "native-engine",
+        "xyEnabled": true,
+        "playing": false,
+        "playingKnown": false,
+        "bleSupported": false,
+        "transportSupported": true,
+        "programSupported": true,
+        "nativeSupported": true,
+        "companionEnabled": true,
+        "companionReady": true,
+        "sequenceSupported": true,
+        "fullscreenXY": false,
+        "xyTouchGate": true,
+        "telemetryAvailable": true,
+        "telemetryOrigin": "native-engine",
+        "outputPeak": 0,
+        "meterCount": 6,
+        "presetIndex": 2,
+        "presetName": "Flea Circuit",
+        "sourceLabel": "Native engine",
+        "capabilityLabel": "Extended / negotiated",
+        "audio": {
+          "mode": "native-engine",
+          "name": "ZaaggenZ native procedural core",
+          "sourceRevision": "ac21d089e7afce6bc7adc555deb0ce90b56a39cd",
+          "sampleRate": 44100,
+          "generation": 4,
+          "clockRunning": false,
+          "frames": 0,
+          "peak": 0,
+          "rms": 0,
+          "rejected": 0,
+          "queueOverflows": 0
+        },
+        "tx": 4,
+        "rx": 4,
+        "revision": 25,
+        "milliseconds": 0,
+        "notice": "Endpoint panic requested",
+        "controls": [
+          {
+            "label": "Grit",
+            "value": 70,
+            "display": "70",
+            "origin": "native-engine",
+            "enabled": true
+          },
+          {
+            "label": "Vowel",
+            "value": 110,
+            "display": "110",
+            "origin": "native-engine",
+            "enabled": true
+          },
+          {
+            "label": "Motion",
+            "value": 120,
+            "display": "120",
+            "origin": "native-engine",
+            "enabled": true
+          },
+          {
+            "label": "Character",
+            "value": 51,
+            "display": "Upper Chop",
+            "origin": "native-engine",
+            "enabled": true
+          }
+        ],
+        "telemetryMeters": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "sequence": {
+          "running": false,
+          "bpm": 120,
+          "length": 16,
+          "selected": 0,
+          "playhead": 255,
+          "skipped": 0,
+          "steps": [
+            {
+              "enabled": true,
+              "note": 48,
+              "velocity": 110,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 55,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 60,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 58,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 48,
+              "velocity": 110,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 63,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 55,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 58,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 51,
+              "velocity": 110,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 58,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 63,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 60,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 46,
+              "velocity": 110,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 53,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": true,
+              "note": 58,
+              "velocity": 82,
+              "gate": 65
+            },
+            {
+              "enabled": false,
+              "note": 65,
+              "velocity": 82,
+              "gate": 65
+            }
+          ]
+        },
+        "midi": [
+          [
+            240,
+            125,
+            67,
+            89,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            247
+          ],
+          [
+            240,
+            125,
+            67,
+            89,
+            1,
+            0,
+            3,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            247
+          ],
+          [
+            240,
+            125,
+            67,
+            89,
+            1,
+            0,
+            6,
+            1,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            2,
+            247
+          ],
+          [
+            240,
+            125,
+            67,
+            89,
+            1,
+            0,
+            8,
+            1,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            247
+          ]
+        ],
+        "profiles": [
+          {
+            "id": "melodee",
+            "name": "Melodee"
+          },
+          {
+            "id": "sloop",
+            "name": "SLOOP"
+          },
+          {
+            "id": "skiff",
+            "name": "Skiff"
+          },
+          {
+            "id": "x0x",
+            "name": "X0X"
+          },
+          {
+            "id": "zaaggenz-native",
+            "name": "ZaaggenZ"
+          },
+          {
+            "id": "xenoresonator-native",
+            "name": "Xenoresonator"
+          }
+        ]
+      },
+      "commands": [
+        "profile zaaggenz-native",
+        "transport native",
+        "connect",
+        "preset 2",
+        "panic",
+        "page link",
+        "frame <temporary>/link.ppm"
+      ]
     }
   ]
 }

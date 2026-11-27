@@ -221,6 +221,22 @@ void independentRelease() {
     const auto first=tracker.panicMessage(), second=session.panic();
     assert(decoded(first).sequence==decoded(second).sequence);
     tracker.sent(first); tracker.sent(second); assert(!tracker.needsRelease());
+    // Lease/version recovery performs a complete transport reconnect. A wire
+    // handshake alone must not steal old release duty; the closed epoch releases
+    // first, then resets the worker tracker before admitting a new session.
+    tracker.reset(); ready(session,CompanionInstrument::Xenoresonator,80,0);
+    tracker.sent(companionDiscover(CompanionInstrument::Xenoresonator,80));
+    tracker.sent(session.note(48,110));
+    tracker.sent(companionDiscover(CompanionInstrument::Xenoresonator,81));
+    assert(decoded(tracker.panicMessage()).session==80);
+    tracker.sent(tracker.panicMessage()); tracker.reset();
+    ready(session,CompanionInstrument::Xenoresonator,81,1);
+    tracker.sent(companionDiscover(CompanionInstrument::Xenoresonator,81));
+    const auto recoveredNote=session.note(60,100);tracker.sent(recoveredNote);
+    tracker.sent(companionDiscover(CompanionInstrument::Xenoresonator,80));
+    const auto recoveredPanic=decoded(tracker.panicMessage());
+    assert(recoveredPanic.session==81 && recoveredPanic.sequence==decoded(recoveredNote).sequence+1);
+    tracker.sent(encodeCompanion(recoveredPanic)); assert(!tracker.needsRelease());
 }
 }
 int main() {

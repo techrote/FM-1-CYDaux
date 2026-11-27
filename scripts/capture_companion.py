@@ -108,6 +108,9 @@ def main() -> None:
                 sound(tone_blocks, tone_frames)
                 capture(f"companion-{prefix}-state.png")
                 command("panic")
+                if prefix == "zaaggenz":
+                    command("page link")
+                    capture("companion-zaaggenz-link.png")
                 command("disconnect")
             command("quit")
         if process.wait(timeout=10) != 0:

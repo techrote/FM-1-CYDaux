@@ -85,7 +85,7 @@ timing remains a model of selected hardware costs.
 
 An [independent fresh execution receipt](evidence/companion-emulator-independent.json)
 records replay of the locally built 57,852-byte target image, SHA-256
-`11af725902a08eab29df2655e857adb80d7a626908b36b8a125be3af1d9fa93e`, in both
+`488d614f669714efa5b6b37a8d780a59665381f6b56e23d4a2ffcd940a1d8186`, in both
 modes. Both runs passed USB discovery/readback, actual audio, preset/parameter
 changes, stale-session and range rejection, panic, lease expiry and recovery.
 Independent inspection also found identical repeated-strike PCM, different PCM
@@ -94,11 +94,23 @@ and nonzero actual PCM/modal telemetry. The strict run reported zero USB audio
 underruns and a maximum **655.875 emulated microseconds** per 256-frame callback
 against a **5,804.989-microsecond modeled block period**. These are emulator
 observations, not physical FM-1 timings or a worst-case hardware guarantee.
+Target telemetry observes engine PCM before the platform's MASTER attenuation;
+the captured I2S WAV observes the later output path, so their peak scales differ.
+The same exercised session touched 324 bytes of the emulated main stack and
+332 bytes of the emulated supervisor stack according to the harness's canary
+scan; these are observed emulation high-water marks, not static worst-case or
+physical stack measurements.
 
 That receipt identifies the exact copied inputs and its local source state; it
-does not claim an independent rebuild or replace final-revision hosted CI.
-For delivery acceptance, use the successful workflow for the selected PR head,
-its source pins and its artifact hashes. An earlier PR #15 run at `8c22f91d`
+does not represent a separate local rebuild. Subsequently,
+[hosted run 46048299250](https://github.com/techrote/FM-1-VIBEWARE/actions/runs/46048299250)
+at target revision `3449ead4dd13d91ba0a57262a48349f38d6c465c` independently
+passed GCC/Clang sanitizer checks, target compilation and both emulator modes.
+Its ELF and raw-XIP hashes exactly match the locally exercised inputs. All 27
+artifact manifest hashes verified; every captured WAV and actual LCD image
+matched the independent local runs byte for byte. For later revisions, repeat
+that workflow and inspect the selected head's source pins and artifact hashes.
+An earlier PR #15 run at `8c22f91d`
 failed USB enumeration before the harness used the emulator's complete plug
 operation; it is not a passing emulator receipt.
 

@@ -150,6 +150,7 @@ constexpr Rect kPlay{8,160,98,36}, kNote{111,160,98,36}, kPanic{214,160,98,36};
 constexpr Rect kPad{8,60,218,136}, kXYNote{234,60,78,42}, kXYPanic{234,108,78,32};
 constexpr Rect kConnect{8,125,148,30}, kConfigure{164,125,148,30};
 constexpr Rect kChannelMinus{69,165,28,25}, kChannelPlus{126,165,28,25};
+constexpr Rect kCompanionRefresh{8,165,144,25};
 constexpr Rect kProgramMinus{225,165,28,25}, kProgramPlus{284,165,28,25};
 constexpr Rect kSetupBack{8,201,304,31};
 constexpr Rect kXYGate{234,60,78,36}, kXYExpand{234,102,78,28}, kXYTheme{234,136,78,28};
@@ -579,11 +580,15 @@ void drawLink(Canvas& canvas,const UiModel& model) {
   const bool linked=model.connection==ConnectionState::Connected||model.connection==ConnectionState::Connecting;
   button(canvas,kConnect,linked?"UNLINK":"CONNECT",model.transport!=TransportKind::Demo);
   button(canvas,kConfigure,"SETUP");
-  drawText(canvas,8,174,"MIDI CH",theme::muted);
-  button(canvas,kChannelMinus,"-");button(canvas,kChannelPlus,"+");
   char text[32];
-  std::snprintf(text,sizeof(text),"%02u",static_cast<unsigned>(model.midiChannel));
-  centerText(canvas,{98,165,27,25},text,theme::text);
+  if(model.companionEnabled){
+    button(canvas,kCompanionRefresh,"REFRESH",model.connection==ConnectionState::Connected);
+  }else{
+    drawText(canvas,8,174,"MIDI CH",theme::muted);
+    button(canvas,kChannelMinus,"-");button(canvas,kChannelPlus,"+");
+    std::snprintf(text,sizeof(text),"%02u",static_cast<unsigned>(model.midiChannel));
+    centerText(canvas,{98,165,27,25},text,theme::text);
+  }
   drawText(canvas,166,174,model.companionEnabled?"NOTE":"PROGRAM",theme::muted);
   const bool editable=model.companionEnabled?model.notesSupported:model.programSupported;
   button(canvas,kProgramMinus,"-",editable);
@@ -783,8 +788,12 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
     if(captureButton(kConnect,{linked?ActionType::Disconnect:ActionType::Connect},
                       model.transport!=TransportKind::Demo))return;
     if(captureButton(kConfigure,{ActionType::Configure}))return;
-    if(captureButton(kChannelMinus,{ActionType::ChannelDelta,-1}))return;
-    if(captureButton(kChannelPlus,{ActionType::ChannelDelta,1}))return;
+    if(model.companionEnabled){
+      if(captureButton(kCompanionRefresh,{ActionType::Refresh},model.connection==ConnectionState::Connected))return;
+    }else{
+      if(captureButton(kChannelMinus,{ActionType::ChannelDelta,-1}))return;
+      if(captureButton(kChannelPlus,{ActionType::ChannelDelta,1}))return;
+    }
     const auto action=model.companionEnabled?ActionType::NoteDelta:ActionType::ProgramDelta;
     const bool editable=model.companionEnabled?model.notesSupported:model.programSupported;
     if(captureButton(kProgramMinus,{action,-1},editable))return;

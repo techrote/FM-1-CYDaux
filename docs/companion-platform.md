@@ -114,6 +114,14 @@ snap a newly edited value back. Firmware seeds sessions once from `esp_random`;
 each connection uses a new session. Physical adapters retain their existing
 transport generation/readiness epochs as a separate guard.
 
+A current Session/Version error retires controls, telemetry, queued mutations,
+the local sequence and captured gestures. Explicit **Refresh** then requests a
+full transport reconnect. The old connection's independent note-release guard
+runs before it is reset, and only the new connection starts a fresh CY1 session.
+This maintains one wire session per transport epoch; a replayed or competing
+Discover cannot steal the emergency-release responsibility. No note or parameter
+mutation is replayed during recovery.
+
 The 40-message controller queue coalesces only the trailing uninterrupted run of
 parameter mutations. It preserves the admitted packet's sequence, so discarded
 unsent touch samples do not exhaust the sequence window. Notes, reads and preset

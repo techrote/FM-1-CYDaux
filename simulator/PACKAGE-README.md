@@ -16,7 +16,8 @@ Double-click **CYDaux-Evaluator.exe**. It opens the studio at
 its Python runtime, so no separate Python installation is required. Leave its
 console window open while playing; press Ctrl+C there when finished.
 
-The package also includes `Open-Simulator.cmd` / `run.py` as a fallback for an
+The package also includes `Open-Simulator.cmd`, which first launches the bundled
+evaluator. If that executable is absent, it falls back to `run.py` using an
 existing Python 3.10+ installation. `fm1-simulator.exe` is the native rendering
 and instrument process; launching it by itself opens the scripting interface.
 
@@ -38,7 +39,7 @@ and notices; the repository contains the complete companion build.
 
 ## First sound
 
-1. Select **Xenoresonator Native** or **ZaaggenZ Native** in the instrument
+1. Select **Xenoresonator** or **ZaaggenZ** in the instrument
    dropdown. The studio selects and connects its native endpoint.
 2. Click **Enable sound**. Browser policy requires this user gesture before
    audio can start. Begin at a comfortable listening level.

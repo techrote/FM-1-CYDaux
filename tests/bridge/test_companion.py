@@ -67,6 +67,25 @@ class CompanionBridgeTests(unittest.TestCase):
         session.release()
         self.assertEqual(endpoint.sent[-1], cy(8, 99, 51))
 
+    def test_recovery_reconnect_releases_each_transport_epoch(self):
+        endpoint = MockMidi(echo=False)
+        old = Session(endpoint, "token", "midi", "xenoresonator-native", authenticated=True)
+        for message in [cy(1, 99, 0, (2,)), cy(7, 99, 1, (48, 110)), cy(1, 100, 0, (2,))]:
+            old.handle({"type": "midi", "data": list(message)})
+        # A competing discovery cannot transfer responsibility inside this
+        # socket. The controller's retired-session Refresh reconnects instead.
+        old.release()
+        self.assertEqual(endpoint.sent[-1], cy(8, 99, 2))
+        recovered = Session(endpoint, "token", "midi", "xenoresonator-native", authenticated=True)
+        for message in [cy(1, 100, 0, (2,)), cy(7, 100, 1, (60, 110)), cy(1, 99, 0, (2,))]:
+            recovered.handle({"type": "midi", "data": list(message)})
+        recovered.release()
+        self.assertEqual(endpoint.sent[-1], cy(8, 100, 2))
+        count = len(endpoint.sent)
+        old.release()
+        recovered.release()
+        self.assertEqual(len(endpoint.sent), count)
+
 
 if __name__ == "__main__":
     unittest.main()

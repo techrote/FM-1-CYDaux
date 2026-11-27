@@ -59,7 +59,7 @@ Panic remains reachable on the normal and fullscreen performance pages.
 | Fullscreen XY | The pad fills the display below a 36-pixel toolbar. **Back**, gate mode and panic stay visible. | Same controls and telemetry as the normal XY view; no independent or decorative animation engine. |
 | Sequence | Sixteen local note/gate cells, run/stop, tempo, length, selected-note adjustment, velocity and gate sliders. | A local MIDI performance aid. It is not readback or editing of a device's internal sequencer. |
 | Bank | Up to eight named presets, each recalled through the common controller. Long names wrap inside the card. | Recall requires the negotiated preset capability. Disconnected names remain visible with **Connect to recall**; demo mode is explicitly a name preview, not generated audio. |
-| Link | Profile-supported transports, connect/disconnect, setup and audition pitch. | **Native** is available only when the host explicitly installs a real audio engine. The ESP32 firmware cannot select an imaginary local audio engine. |
+| Link | Profile-supported transports, connect/disconnect, setup, **Refresh** and audition pitch. | **Native** is available only when the host explicitly installs a real audio engine. **Refresh** is available while connected; a retired endpoint lease first reconnects the transport so independent note-release tracking also starts fresh. The ESP32 firmware cannot select an imaginary local audio engine. |
 
 State-channel bar lengths and the XY plot use an explicitly labelled square
 root scale to make quiet modes visible. The raw 0–127 channel numbers remain

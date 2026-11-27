@@ -54,6 +54,11 @@ The four original firmware profiles remain available. Their controls and
 supported routes are unchanged. Unmodified Fune does not implement the new CY1
 endpoint: choosing a new profile does not add controls to that firmware.
 
+If the endpoint reports a lost or incompatible session, performance controls
+are disabled and the loop stops. Use **Refresh** on Link to reconnect the whole
+transport and discover a fresh session. Previously held notes and edits are
+not replayed. If the endpoint is still incompatible, the controls remain disabled.
+
 ## Linux or source use
 
 The Linux package needs Python 3.10+ and its included native executable:

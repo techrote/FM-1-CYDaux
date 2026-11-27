@@ -142,9 +142,26 @@ int main() {
     assert(recording.actions.empty());model.nativeSupported=true;tap(ui,model,280,75);
     assert(recording.actions.size()==1&&recording.actions[0].type==ActionType::SelectTransport&&recording.actions[0].a==3);
 
+    // Recovery must remain reachable after the endpoint retires its identity
+    // while the wire stays connected. Legacy channel controls stay intact.
+    for(const bool ready:{false,true}){
+        model.companionReady=ready;model.connection=ConnectionState::Connected;
+        recording.clear();tap(ui,model,80,177);
+        assert(recording.actions.size()==1&&recording.actions[0].type==ActionType::Refresh);
+    }
+    for(const auto connection:{ConnectionState::Offline,ConnectionState::Connecting}){
+        model.connection=connection;recording.clear();tap(ui,model,80,177);
+        assert(recording.actions.empty());
+    }
+    model.connection=ConnectionState::Connected;model.companionEnabled=false;
+    recording.clear();tap(ui,model,80,177);tap(ui,model,140,177);
+    assert(recording.actions.size()==2&&recording.actions[0].type==ActionType::ChannelDelta&&
+           recording.actions[0].a==-1&&recording.actions[1].type==ActionType::ChannelDelta&&recording.actions[1].a==1);
+    model.companionEnabled=true;
+
     // Corrupted presentation fields cannot index outside bounded model arrays.
     model.meterCount=255;model.sequence.selected=255;model.sequence.length=255;model.presetCount=255;
     CheckedCanvas hostile;
     for(unsigned page=0;page<6;++page){model.page=static_cast<Page>(page);ui.render(hostile,model);}
-    std::cout << "Performance UI: PASS (gated XY, context release, full screen, presets, sequence capture, bounds, themes)\n";
+    std::cout << "Performance UI: PASS (gated XY, context release, full screen, presets, sequence capture, endpoint refresh, bounds, themes)\n";
 }

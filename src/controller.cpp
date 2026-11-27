@@ -437,7 +437,14 @@ void Controller::dispatch(UiAction a) {
         case ActionType::Configure: stopSequence(); releaseNote(); platformAction_=a; platformPending_=true; break;
         case ActionType::Refresh:
             if (companionProfile() && model_.connection==ConnectionState::Connected) {
-                if (companionRetired_) beginCompanion();
+                if (companionRetired_) {
+                    // Release tracking belongs to the transport epoch. A new
+                    // wire session on the same link would leave the independent
+                    // worker/bridge panic guard attached to the retired session.
+                    // Reuse the normal close/release/reset/connect path instead.
+                    platformAction_={ActionType::Connect}; platformPending_=true;
+                    setNotice("Reconnecting endpoint and release tracking...");
+                }
                 else if (count_<kQueueSize) {
                     const auto message=companion_.ready()?companion_.requestState(now_):companion_.discover(now_);
                     if (message.size && !enqueue(message)) companion_.cancelPending();

@@ -62,7 +62,11 @@ jobs:
         run: python -m unittest discover -s tests/package -v
       - name: Render actual instrument recordings and shared-UI demonstration
         if: matrix.platform == 'linux'
-        run: python simulator/render_audio_examples.py --binary build/fm1-simulator --output build/companion-media --video
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python simulator/render_audio_examples.py --binary build/fm1-simulator --output build/companion-media --video
+          ffmpeg -version > build/companion-media/ffmpeg-version.txt
       - name: Build standalone Windows launcher
         if: matrix.platform == 'windows'
         run: |

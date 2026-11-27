@@ -3,11 +3,11 @@
   "physical_hardware": false,
   "input_manifest": {
     "cydaux-usb-qualification": {
-      "sha256": "a807e22d748c521b54a7b0a77d362faaf2416ba4ced1878c7dfb034bcd8266b1",
-      "size": 4830632
+      "sha256": "4c379359a4944b70a10d60af36ea0cfb17ed3a0ac5debb35ac44abdfc85e6869",
+      "size": 4836808
     },
-    "xeno-v3.xip.bin": {
-      "sha256": "11af725902a08eab29df2655e857adb80d7a626908b36b8a125be3af1d9fa93e",
+    "xeno-final.xip.bin": {
+      "sha256": "488d614f669714efa5b6b37a8d780a59665381f6b56e23d4a2ffcd940a1d8186",
       "size": 57852
     },
     "metrics.txt": {
@@ -15,8 +15,8 @@
       "size": 93
     },
     "harness-source.rs": {
-      "sha256": "38fe7a7064eb307ff9676e68b241338362205186df2ce56ec1a2c5663b41c149",
-      "size": 7090
+      "sha256": "8c93baa370a25c89af40eccec4e6ac37f0ee112bc9591c75770d62e9e70fec0c",
+      "size": 8176
     }
   },
   "modes": {
@@ -25,22 +25,27 @@
         "status": "PASS",
         "mode": "instruction",
         "source": "actual pi32v2 firmware in fm1-emu USB model",
-        "elapsed_host_seconds": 2.111489633,
+        "elapsed_host_seconds": 2.000404083,
         "emulated_ms": 3646,
         "i2s_frames": 141824,
         "usb_audio_frames": 134306,
         "usb_audio_underruns": 0,
+        "emulated_main_stack_used": 324,
+        "emulated_supervisor_stack_used": 332,
         "checks": [
           "USB discovery",
           "actual readback",
           "parameter and preset",
           "PCM repeat",
           "coupling contrast",
+          "actual interval peaks",
           "stale session",
           "invalid range",
           "panic tail",
           "lease expiry",
-          "new session recovery"
+          "new session recovery",
+          "modeled callback deadline",
+          "emulated stack reserve"
         ],
         "target_callback_max_us": 450.375,
         "audio_block_budget_us": 5804.988662131519
@@ -48,7 +53,9 @@
       "target_metrics": {
         "target_audio_blocks": "550",
         "target_audio_max_ticks": "10809",
-        "target_reply_deferrals": "0"
+        "target_reply_deferrals": "0",
+        "emulated_main_stack_used": "324",
+        "emulated_supervisor_stack_used": "332"
       },
       "actual_gate_snapshot_examples": [
         {
@@ -161,22 +168,27 @@
         "status": "PASS",
         "mode": "strict",
         "source": "actual pi32v2 firmware in fm1-emu USB model",
-        "elapsed_host_seconds": 6.524816308,
+        "elapsed_host_seconds": 6.142620601,
         "emulated_ms": 3643,
         "i2s_frames": 135424,
         "usb_audio_frames": 127911,
         "usb_audio_underruns": 0,
+        "emulated_main_stack_used": 324,
+        "emulated_supervisor_stack_used": 332,
         "checks": [
           "USB discovery",
           "actual readback",
           "parameter and preset",
           "PCM repeat",
           "coupling contrast",
+          "actual interval peaks",
           "stale session",
           "invalid range",
           "panic tail",
           "lease expiry",
-          "new session recovery"
+          "new session recovery",
+          "modeled callback deadline",
+          "emulated stack reserve"
         ],
         "target_callback_max_us": 655.875,
         "audio_block_budget_us": 5804.988662131519
@@ -184,7 +196,9 @@
       "target_metrics": {
         "target_audio_blocks": "525",
         "target_audio_max_ticks": "15741",
-        "target_reply_deferrals": "0"
+        "target_reply_deferrals": "0",
+        "emulated_main_stack_used": "324",
+        "emulated_supervisor_stack_used": "332"
       },
       "actual_gate_snapshot_examples": [
         {
@@ -296,20 +310,36 @@
   "result": "PASS",
   "provenance": {
     "integration_repository": "https://github.com/techrote/FM-1-VIBEWARE/pull/15",
-    "integration_base_commit": "8c22f91d8d074b1d67ce4ad2a2a38c2931b56427",
-    "source_state": "Local qualification fixes over that published commit; this is independent execution of supplied built inputs, not an independent rebuild or a final-HEAD CI receipt.",
+    "source_state": "Exact local source commit; this is independent execution of supplied built inputs, not an independent rebuild or a hosted CI receipt.",
     "emulator_commit": "736aded65c8e2e9d652cf595fca248734483a877",
     "xenoresonator_commit": "fa27a317bb116f2afb62a710876f96314756f814",
     "dinghy_commit": "92f17b28f2d05f2f78fd1b160b58475d518902c8",
     "compiled_image_purpose": "Internal emulator input; not distributed or installable.",
     "commands": [
-      "./cydaux-usb-qualification xeno-v3.xip.bin instruction metrics.txt instruction",
-      "./cydaux-usb-qualification xeno-v3.xip.bin strict metrics.txt strict"
-    ]
+      "./cydaux-usb-qualification xeno-final.xip.bin instruction metrics.txt instruction",
+      "./cydaux-usb-qualification xeno-final.xip.bin strict metrics.txt strict"
+    ],
+    "integration_source_commit": "b54a171be076474434c2c56420d827f39c06496f",
+    "target_audio_observation_boundary": "CY1 PCM peak is before platform MASTER attenuation; WAV is actual emulated I2S output after platform packing/level."
   },
   "cross_mode_wavs_identical": {
     "xeno-uncoupled.wav": true,
     "xeno-repeat.wav": true,
     "xeno-coupled.wav": true
+  },
+  "hosted_rebuild_crosscheck": {
+    "source_commit": "3449ead4dd13d91ba0a57262a48349f38d6c465c",
+    "workflow_run": "https://github.com/techrote/FM-1-VIBEWARE/actions/runs/46048299250",
+    "artifact_id": 15222349807,
+    "artifact_zip_sha256": "e8a6428aac015371257bf416b7c3ffce03a69730a85d713a1e9cc18fd45f3ab3",
+    "manifest_members_verified": 27,
+    "host_gcc_clang_sanitizers": "PASS",
+    "actual_target_compilation": "PASS",
+    "both_usb_audio_emulator_modes": "PASS",
+    "elf_sha256": "e8d9201f83525cb96949326e2d685e8a900280b923497104eb3368e18c1a4507",
+    "internal_xip_sha256": "488d614f669714efa5b6b37a8d780a59665381f6b56e23d4a2ffcd940a1d8186",
+    "rebuilt_image_matches_independently_executed_input": true,
+    "all_instruction_and_strict_wavs_and_lcd_match_independent_local_runs": true,
+    "physical_hardware": false
   }
 }
