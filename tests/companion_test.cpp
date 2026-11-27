@@ -163,6 +163,34 @@ void negotiationAndWrap() {
     const auto pending=session.discover(0xfffffff0u); session.sent(pending,0xfffffff0u);
     session.tick(999); assert(session.timedOut());
 }
+void endpointRetirement() {
+    for (const auto code : {CompanionError::Version, CompanionError::Session}) {
+        CompanionSession session; ready(session,CompanionInstrument::Xenoresonator,91,0);
+        auto query=session.requestState(1);
+        assert(receive(session,companionState(stateFor(CompanionInstrument::Xenoresonator),91,decoded(query).sequence),2));
+        assert(session.stateFresh(2));
+        query=session.requestState(3); session.sent(query,3);
+        CompanionPacket error; error.op=CompanionOp::Error; error.session=91;
+        error.sequence=decoded(query).sequence; error.size=1; error.payload[0]=static_cast<uint8_t>(code);
+        // A retired, unrelated or older session cannot disable this one.
+        error.session=90; assert(!receive(session,encodeCompanion(error),4) && session.ready());
+        error.session=91; error.sequence--; assert(!receive(session,encodeCompanion(error),4) && session.ready());
+        error.sequence=decoded(query).sequence;
+        assert(!receive(session,encodeCompanion(error),4));
+        assert(!session.ready() && !session.pending() && !session.stateFresh(4));
+        assert(!session.note(48,100).size && !session.setParameter(0,127).size && !session.setPreset(0).size);
+        assert(session.identity().source==CompanionSource::Unknown);
+        session.tick(2000); assert(!session.pending() && !session.timedOut());
+        ready(session,CompanionInstrument::Xenoresonator,92,2001);
+        assert(session.note(48,100).size); // fresh discovery, never a queued replay
+    }
+    CompanionSession session; ready(session,CompanionInstrument::Xenoresonator,93,0);
+    const auto query=session.setParameter(0,127);
+    CompanionPacket error;error.op=CompanionOp::Error;error.session=93;
+    error.sequence=decoded(query).sequence;error.size=1;error.payload[0]=static_cast<uint8_t>(CompanionError::Range);
+    assert(!receive(session,encodeCompanion(error),1) && session.ready());
+    assert(session.note(48,100).size); // one refused value does not revoke identity
+}
 void independentRelease() {
     CompanionReleaseTracker tracker;
     CompanionSession session;
@@ -196,6 +224,6 @@ void independentRelease() {
 }
 }
 int main() {
-    profiles(); malformed(); sessions(); negotiationAndWrap(); independentRelease();
+    profiles(); malformed(); sessions(); negotiationAndWrap(); endpointRetirement(); independentRelease();
     std::cout << "companion metadata, codec, negotiation, session, freshness and wrap tests passed\n";
 }

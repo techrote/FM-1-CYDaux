@@ -1,25 +1,55 @@
 # FM-1 CYDaux
 
-**A touchscreen performance companion for the M-VAVE FM-1, running on the
-original ESP32-2432S028R Cheap Yellow Display.**
+**A common touchscreen performance companion for the M-VAVE FM-1 and VIBEWARE,
+running on the original ESP32-2432S028R Cheap Yellow Display.**
 
-Choose an FM-1 firmware profile, control it from the CYD, and keep the FM-1
-making the sound. The project includes the CYD firmware, a Windows/Linux USB
-MIDI bridge, and a desktop simulator that runs the same C++ controller and UI.
+Choose an instrument profile, play the CYD, and keep the FM-1 making the sound.
+The project includes CYD firmware, an authenticated Windows/Linux USB-MIDI
+bridge, a shared C++ controller and renderer, and a **playable browser-fronted
+evaluator with the actual ZaaggenZ and Xenoresonator native sound engines**.
+One companion firmware includes the supported legacy and extended profiles;
+identity and capability checks gate the richer controls.
 
-**Status:** first implementation; compiled and software-tested, with physical
-CYD/FM-1 qualification still pending. Development began before the FM-1 arrived.
-The simulator and mock bridge make the controls and protocol behavior usable
-now. Successful builds publish downloadable artifacts in
+**Status:** common-platform candidate in [Draft/HOLD PR #2](https://github.com/techrote/FM-1-CYDaux/pull/2),
+preserving the implementation from PR #1. Native execution, actual browser
+audio scheduling, Windows extraction and ESP32 compilation have separate
+qualification gates. **Physical CYD/FM-1 acceptance remains pending.**
+Use the exact source SHA and results of a successful run; an older successful
+artifact does not qualify a newer commit. Builds publish downloadable packages in
 [Actions → Build and qualify](https://github.com/techrote/FM-1-CYDaux/actions/workflows/build.yml).
 
-| Play | XY control |
+| Actual ZaaggenZ controls | Xenoresonator performance surface |
 | --- | --- |
-| ![Actual shared renderer: Play page](docs/images/demo-play.png) | ![Actual shared renderer: XY page](docs/images/demo-xy.png) |
+| ![Actual shared renderer: ZaaggenZ Play](docs/images/companion-zaaggenz-play.png) | ![Actual shared renderer: Xenoresonator XY](docs/images/companion-xenoresonator-xy.png) |
 
 These are actual 320×240 frames from the shared renderer, not hardware photos.
 
-**Documentation:** [start here — complete project handbook](docs/README.md), [owner's field guide](docs/owner-guide.md), [exact-build downloads and evidence](docs/delivery-001.md), and [troubleshooting](docs/troubleshooting.md).
+**Start here:** [playable evaluator and owner guide](docs/companion-owner-guide.md),
+[platform and integration contract](docs/companion-platform.md),
+[virtual execution and evidence](docs/virtual-evaluator.md),
+[complete handbook](docs/README.md).
+
+## The common companion
+
+The shared interface adds single-finger gated XY, fullscreen performance,
+typed parameter cards, preset recall, a local 16-step sequencer, three palettes
+and state plots derived from actual instrument output. A touch selects both
+XY values before attacking the note. Releasing, changing context or panicking
+releases it. Source labels distinguish native-engine readback, device reports,
+local intent and silent mock state.
+
+| Integration | Working implementation | Qualification boundary |
+| --- | --- | --- |
+| **ZaaggenZ** | Eight meaningful parameters, six procedural presets, notes, XY and actual channel/PCM peaks | Source-pinned native engine; its source-image bank is excluded. No claim that unmodified FM-1 firmware implements CY1. |
+| **Xenoresonator** | Actual VIBEWARE resonator core, four material presets, excitation/damping/coupling controls and six modal peaks | Source-pinned native engine; coordinated [FM-1 USB endpoint PR #15](https://github.com/techrote/FM-1-VIBEWARE/pull/15) also builds and runs inside fm1-emu. Physical endpoint acceptance remains pending. |
+| **Melodee, SLOOP, Skiff, X0X** | Original MIDI maps, BLE/bridge behavior, calibration, sessions and safeguards | Existing source audits and software tests retained; physical acceptance remains pending. |
+
+The compact versioned CY1 SysEx endpoint discovers a known instrument identity,
+capabilities and current state. Profiles and layouts are currently compiled into
+the common firmware: this is not arbitrary downloaded-interface execution.
+The same installed image can switch between its supported instruments. Adding a
+new identity still requires a profile/build update. Unknown or incompatible
+endpoints leave extended controls disabled.
 
 ## The firmware shortlist
 
@@ -65,16 +95,26 @@ Melodee's editor SysEx is excluded from its BLE path.
 
 ## Try it before the FM-1 arrives
 
-**Windows prebuilt:** open a successful Actions run, download the
-`cydaux-simulator-windows-…` artifact, extract it, and double-click
-`Open-Simulator.cmd`. Python 3.10 or newer is required; a compiler is not.
-The browser opens a local simulator at `http://127.0.0.1:8781/`.
+**Windows prebuilt:** open a successful Actions run for the mission branch,
+download `cydaux-evaluator-windows-<source SHA>`, extract the entire ZIP, and
+double-click `CYDaux-Evaluator.exe` or `Open-Simulator.cmd`. This package includes
+its runtime; **no separate Python installation or compiler is required**.
+The browser opens the local evaluator at `http://127.0.0.1:8781/`.
 
-**From source**, with Python 3.10+ and a C++17 compiler (`g++` or `clang++`):
+Select **Xenoresonator** or **ZaaggenZ**, wait for **Native engine**, and click
+**Enable sound**. Tap NOTE, play the gated XY pad, recall a BANK preset or start
+the SEQ loop. Xenoresonator is percussive: tap repeatedly or use the sequencer
+to compare damping and material changes. STATE shows actual engine-derived
+peaks. The audio/video artifact contains reproducible recordings and shared-UI
+demonstrations made by these implementations.
+
+**From source**, with Python 3.10+, CMake 3.20+ and a C/C++17 compiler:
 
 ```console
-git clone --branch feat/cyd-companion-001 https://github.com/techrote/FM-1-CYDaux.git
+git clone --branch mission/vibeware-companion-platform-001 https://github.com/techrote/FM-1-CYDaux.git
 cd FM-1-CYDaux
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 2
 python simulator/run.py
 ```
 
@@ -82,11 +122,12 @@ The command checks out the implementation branch while its PR is under review.
 The launcher builds the native executable if necessary.
 On Windows, `py` may be used instead of `python`.
 
-Drag the Play sliders, change tracks, switch banks, try Mix and XY, and hold
-NOTE or Space. Release outside the display to check note release. The top
-firmware name cycles profiles. Link opens the connection controls. Mock
-connections show the generated MIDI and simulated feedback; the browser
-simulator produces no audio and opens no real BLE connection.
+The touchscreen frame is produced by the same C++ renderer as the CYD; browser
+pointer events drive that controller and the actual native engine. The top
+firmware name cycles profiles and Link opens connection controls. Legacy
+profiles remain available as silent mock-device demonstrations. The evaluator
+does not open a real BLE radio or MIDI port. Actual FM-1 CPU emulation is a
+separate downstream qualification route, documented in the virtual guide.
 
 Read [the simulator guide](simulator/README.md) for scripting, screenshots,
 prebuilt packages, and the distinction between sent and returned values.
@@ -168,6 +209,7 @@ their documented feedback limits. See [the bridge guide](docs/bridge.md).
 | **QUEUED** | Accepted by the controller, still awaiting transport delivery |
 | **SENT** | Delivered to the selected transport; instrument acceptance is unconfirmed |
 | **DEVICE** | Returned by the connected instrument's MIDI input |
+| **NATIVE** | Returned by the actual source-pinned native engine |
 
 There is no fake initial patch readback. Reconnect/profile changes invalidate
 old values; XY hides its cursor until both axes have values. Unsupported
@@ -190,13 +232,18 @@ ctest --test-dir build -C Release --output-on-failure
 python -m unittest discover -s tests/bridge -v
 python -m unittest discover -s simulator -p "test_*.py" -v
 node simulator/test_frontend.cjs
+node simulator/test_audio_player.cjs
 python -m unittest discover -s tests/package -v
 ```
 
 Set `FM1_CYD_SIMULATOR` to `build/fm1-simulator` (Windows:
 `build/fm1-simulator.exe`) to enable the two additional real-TCP/shared-core
 bridge tests. CI sets this automatically on both platforms. The Node check
-uses the real HTTP/native engine with a DOM shim, not a browser visual test.
+uses the real HTTP/native engine with a DOM shim. A separate real-Chrome gate
+exercises pointer controls, PCM delivery and Web Audio scheduling. The Windows
+gate launches the freshly extracted standalone package from a path containing
+spaces and Unicode, with Python/compiler directories removed from its PATH.
+See [reproduction and evidence classes](docs/virtual-evaluator.md).
 
 For the original CYD, use Python 3.11 and pinned PlatformIO:
 
@@ -214,12 +261,16 @@ connection timeouts do not block touch handling.
 
 ## Scope and next hardware milestone
 
-This first build provides performance controls, note audition, a mixer, XY,
-connections, and a small validated SLOOP live-state/transport integration.
-It does not yet implement pattern editing, project/sample transfer, audio
-streaming, a clock generator, an on-device full web browser, or firmware
-updating. X0X's drum/break/mix roles and Skiff's contextual remote button
-protocol are not part of the current profiles.
+The local companion sequence editor sends note events; it does not edit a remote
+instrument's internal sequencer. The desktop evaluator streams actual generated
+PCM to its browser. The CYD itself does not synthesize or stream audio. Project
+or sample transfer, arbitrary remote layout download, a full on-device browser
+and FM-1 firmware updating remain outside this candidate. X0X's drum/break/mix
+roles and Skiff's contextual remote button protocol remain outside their profiles.
+
+Reusable templates for Chronomorph, Ecophon, Grimoire and MHAC are integration
+guidance, not completed sound-engine integrations. See the
+[worker contract](AGENTS.md) and [substantive follow-up backlog](docs/companion-backlog.md).
 
 [Hardware validation](docs/hardware-validation.md) lists the measurements and
 observations to record when the FM-1 arrives: screen and touch, Bluetooth

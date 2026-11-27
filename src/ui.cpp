@@ -170,6 +170,19 @@ Rect stepRect(int i) { return {8+(i%8)*38,60+(i/8)*31,36,27}; }
 Rect presetRect(int i) { return {8+(i%2)*156,60+(i/2)*34,148,30}; }
 constexpr Page extendedPages[6]={Page::Play,Page::Mix,Page::XY,Page::Sequence,Page::Presets,Page::Link};
 int clampMidi(int value) { return std::max(0,std::min(127,value)); }
+int visibleStatePeak(int value) {
+  // Integer sqrt curve expands quiet state channels without invented motion.
+  // Numeric readings and the actual PCM peak remain linear and unmodified.
+  unsigned remaining=static_cast<unsigned>(clampMidi(value))*127u;
+  unsigned root=0,bit=1u<<12;
+  while(bit>remaining)bit>>=2;
+  while(bit){
+    if(remaining>=root+bit){remaining-=root+bit;root=(root>>1)+bit;}
+    else root>>=1;
+    bit>>=2;
+  }
+  return static_cast<int>(root);
+}
 int scalePosition(int position,int start,int length) {
   if(length<=1||position<=start)return 0;
   if(position>=start+length-1)return 127;
@@ -346,7 +359,7 @@ void drawMix(Canvas& canvas,const UiModel& model) {
         drawText(canvas,18,top,label,theme::muted,1,1);
         fill(canvas,35,top,147,7,theme::line);
         const int level=clampMidi(model.telemetryMeters[static_cast<std::size_t>(i)]);
-        fill(canvas,35,top,std::max(1,level*147/127),7,originColor(model.telemetryOrigin));
+        if(level)fill(canvas,35,top,std::max(1,visibleStatePeak(level)*147/127),7,originColor(model.telemetryOrigin));
         std::snprintf(label,sizeof(label),"%03d",level);
         drawText(canvas,192,top,label,theme::text,1,3);
       }
@@ -361,7 +374,7 @@ void drawMix(Canvas& canvas,const UiModel& model) {
     if(model.telemetryAvailable)
       fill(canvas,238,163,std::max(1,clampMidi(model.outputPeak)*70/127),6,originColor(model.telemetryOrigin));
     drawText(canvas,238,179,originName(model.telemetryOrigin),originColor(model.telemetryOrigin),1,10);
-    drawText(canvas,10,198,model.telemetryAvailable?"ENGINE PEAKS / SINCE LAST STATE REPLY":"NO TELEMETRY CLAIM WITHOUT FRESH STATE",theme::muted,1,50);
+    drawText(canvas,10,198,model.telemetryAvailable?"SQRT STATE PEAKS / RAW VALUES / PCM LINEAR":"NO TELEMETRY CLAIM WITHOUT FRESH STATE",theme::muted,1,50);
     return;
   }
   const int first=(model.trackIndex/4)*4;
@@ -399,19 +412,19 @@ void drawPerformanceField(Canvas& canvas,Rect rect,const UiModel& model) {
   if(measured){
     for(int i=0;i<meters;++i){
       const int x=rect.x+12+(i*2+1)*(rect.w-24)/(meters*2);
-      const int amount=clampMidi(model.telemetryMeters[static_cast<std::size_t>(i)])*(rect.h-36)/127;
+      const int amount=visibleStatePeak(model.telemetryMeters[static_cast<std::size_t>(i)])*(rect.h-36)/127;
       const int base=rect.y+rect.h-10;
       fill(canvas,x-4,base-amount,9,std::max(1,amount),theme::line);
       fill(canvas,x-4,base-amount,9,2,originColor(model.telemetryOrigin));
       if(i>0){
         const int previousX=rect.x+12+(i*2-1)*(rect.w-24)/(meters*2);
-        const int previous=clampMidi(model.telemetryMeters[static_cast<std::size_t>(i-1)])*(rect.h-36)/127;
+        const int previous=visibleStatePeak(model.telemetryMeters[static_cast<std::size_t>(i-1)])*(rect.h-36)/127;
         drawLine(canvas,previousX,base-previous,x,base-amount,theme::blue);
       }
     }
   }
   drawText(canvas,rect.x+8,rect.y+8,measured?(model.telemetryOrigin==ValueOrigin::Native?
-       "NATIVE ENGINE PEAKS":"REPORTED LEVELS"):"LOCAL CONTROL MAP",theme::muted,1,25);
+       "SQRT NATIVE STATE PEAKS":"SQRT REPORTED PEAKS"):"LOCAL CONTROL MAP",theme::muted,1,30);
   if(model.xyEnabled&&model.xyOriginX!=ValueOrigin::Unknown&&model.xyOriginY!=ValueOrigin::Unknown){
     const int x=rect.x+6+clampMidi(model.xyX)*(rect.w-13)/127;
     const int y=rect.y+6+(127-clampMidi(model.xyY))*(rect.h-13)/127;
@@ -674,7 +687,8 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
   if(phase==TouchPhase::Cancel){cancelTouch();return;}
   if(phase!=TouchPhase::Down&&(page_!=model.page||profile_!=model.profileIndex||
      track_!=model.trackIndex||bank_!=model.controlBank||transport_!=model.transport||
-     connection_!=model.connection||setup_!=model.setupActive||fullscreen_!=model.fullscreenXY)){cancelTouch();return;}
+     connection_!=model.connection||setup_!=model.setupActive||fullscreen_!=model.fullscreenXY||
+     preset_!=model.presetIndex||interactionEpoch_!=model.interactionEpoch)){cancelTouch();return;}
   if(phase==TouchPhase::Move){drag(x,y);return;}
   if(phase==TouchPhase::Up){
     // The release sample can be newer than the last coalesced move event.
@@ -687,6 +701,7 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
   cancelTouch();page_=model.page;profile_=model.profileIndex;track_=model.trackIndex;
   bank_=model.controlBank;transport_=model.transport;connection_=model.connection;setup_=model.setupActive;
   fullscreen_=model.fullscreenXY;
+  preset_=model.presetIndex;interactionEpoch_=model.interactionEpoch;
   auto captureButton=[&](Rect rect,UiAction action,bool enabled=true){
     if(!enabled||!rect.contains(x,y))return false;
     capture_=rect;button_=action;gesture_=Gesture::Button;return true;
@@ -696,8 +711,11 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
     if(!rect.contains(x,y)||!model.xyEnabled)return false;
     capture_=rect;gesture_=Gesture::XY;
     gatedXY_=model.companionEnabled&&model.xyTouchGate&&model.notesSupported;
+    // Percussive engines snapshot excitation at attack. Apply the new touch
+    // coordinates first so this strike uses this gesture, not the last one.
+    drag(x,y);
     if(gatedXY_)emit({ActionType::NoteOn});
-    drag(x,y);return true;
+    return true;
   };
   if(model.companionEnabled&&model.page==Page::XY&&model.fullscreenXY){
     if(captureButton(kFullBack,{ActionType::ToggleFullscreen}))return;

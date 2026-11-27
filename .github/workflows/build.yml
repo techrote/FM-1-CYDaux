@@ -47,7 +47,10 @@ jobs:
       - name: Simulator HTTP and framebuffer tests
         run: python -m unittest discover -s simulator -p "test_*.py" -v
       - name: Frontend event integration
-        run: node simulator/test_frontend.cjs ${{ matrix.binary }}
+        run: |
+          node simulator/test_frontend.cjs ${{ matrix.binary }}
+          node simulator/test_audio_player.cjs
+          node simulator/test_audio_lifecycle.cjs
       - name: Host resource and audio-control stress measurement
         run: ./build/fm1-resource-probe${{ matrix.platform == 'windows' && '.exe' || '' }} > build/resource-measurements.json
       - name: Real browser, native PCM and audio scheduling
@@ -57,11 +60,16 @@ jobs:
           python simulator/qualify_browser.py --binary build/fm1-simulator --chromium /usr/bin/google-chrome --output build/browser-evidence
       - name: Flash-package integrity tests
         run: python -m unittest discover -s tests/package -v
+      - name: Render actual instrument recordings and shared-UI demonstration
+        if: matrix.platform == 'linux'
+        run: python simulator/render_audio_examples.py --binary build/fm1-simulator --output build/companion-media --video
       - name: Build standalone Windows launcher
         if: matrix.platform == 'windows'
         run: |
           python -m pip install pyinstaller==6.22.3
-          python -m PyInstaller --noconfirm --clean --onefile --name CYDaux-Evaluator --distpath build/launcher --workpath build/pyinstaller --specpath build --add-data "simulator/index.html;." --add-data "simulator/audio.js;." simulator/run.py
+          $cydauxHtml = (Resolve-Path simulator/index.html).Path
+          $cydauxAudio = (Resolve-Path simulator/audio.js).Path
+          python -m PyInstaller --noconfirm --clean --onefile --name CYDaux-Evaluator --distpath build/launcher --workpath build/pyinstaller --specpath build --add-data "$cydauxHtml;." --add-data "$cydauxAudio;." simulator/run.py
       - name: Package simulator
         if: matrix.platform != 'windows'
         run: python scripts/package.py simulator --platform ${{ matrix.platform }}
@@ -88,6 +96,12 @@ jobs:
             build/browser-evidence/
             build/Testing/Temporary/LastTest.log
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: matrix.platform == 'linux'
+        with:
+          name: cydaux-audio-and-video-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/companion-media/
+          if-no-files-found: error
   firmware:
     name: ESP32-2432S028R firmware
     runs-on: ubuntu-latest

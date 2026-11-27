@@ -1,0 +1,315 @@
+{
+  "verification": "Independent fresh execution and output inspection of supplied built harness/target",
+  "physical_hardware": false,
+  "input_manifest": {
+    "cydaux-usb-qualification": {
+      "sha256": "a807e22d748c521b54a7b0a77d362faaf2416ba4ced1878c7dfb034bcd8266b1",
+      "size": 4830632
+    },
+    "xeno-v3.xip.bin": {
+      "sha256": "11af725902a08eab29df2655e857adb80d7a626908b36b8a125be3af1d9fa93e",
+      "size": 57852
+    },
+    "metrics.txt": {
+      "sha256": "a9dd5e990977f60432daa03f351eaa2d4cd45cad1c0d72bb4a34ebe8cac2eb74",
+      "size": 93
+    },
+    "harness-source.rs": {
+      "sha256": "38fe7a7064eb307ff9676e68b241338362205186df2ce56ec1a2c5663b41c149",
+      "size": 7090
+    }
+  },
+  "modes": {
+    "instruction": {
+      "receipt": {
+        "status": "PASS",
+        "mode": "instruction",
+        "source": "actual pi32v2 firmware in fm1-emu USB model",
+        "elapsed_host_seconds": 2.111489633,
+        "emulated_ms": 3646,
+        "i2s_frames": 141824,
+        "usb_audio_frames": 134306,
+        "usb_audio_underruns": 0,
+        "checks": [
+          "USB discovery",
+          "actual readback",
+          "parameter and preset",
+          "PCM repeat",
+          "coupling contrast",
+          "stale session",
+          "invalid range",
+          "panic tail",
+          "lease expiry",
+          "new session recovery"
+        ],
+        "target_callback_max_us": 450.375,
+        "audio_block_budget_us": 5804.988662131519
+      },
+      "target_metrics": {
+        "target_audio_blocks": "550",
+        "target_audio_max_ticks": "10809",
+        "target_reply_deferrals": "0"
+      },
+      "actual_gate_snapshot_examples": [
+        {
+          "sequence": 4,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            5,
+            3,
+            2,
+            0,
+            0,
+            0
+          ],
+          "values": [
+            76,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "sequence": 8,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            5,
+            3,
+            2,
+            0,
+            0,
+            0
+          ],
+          "values": [
+            76,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "sequence": 12,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            2,
+            1,
+            1,
+            2,
+            1,
+            1
+          ],
+          "values": [
+            76,
+            38,
+            127,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "actual_state_replies": 17,
+      "wav": {
+        "xeno-coupled.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 1980,
+          "rms": 0.004663892311697843,
+          "sha256": "b56cb0808ccbf2c3445ae0857e5fa9f51d8e1139bdf86e00b48b68841f2164cc"
+        },
+        "xeno-full-session.wav": {
+          "frames": 141824,
+          "peak": 2419,
+          "nonzero": 9222,
+          "rms": 0.0024602083526717644,
+          "sha256": "085d67305a287bf8849c7b6792e33612b1a21429f9f4f7ea88ee1089fe35cd61"
+        },
+        "xeno-repeat.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 2412,
+          "rms": 0.004776673564287159,
+          "sha256": "732fb0a8f7db6f224d4368acb70b8c0ad3f9208c6971ec33c683348ff286c2ac"
+        },
+        "xeno-uncoupled.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 2412,
+          "rms": 0.004776673564287159,
+          "sha256": "732fb0a8f7db6f224d4368acb70b8c0ad3f9208c6971ec33c683348ff286c2ac"
+        }
+      },
+      "independent_pcm_repeat": true,
+      "independent_coupling_contrast": true,
+      "independent_peak_telemetry": true
+    },
+    "strict": {
+      "receipt": {
+        "status": "PASS",
+        "mode": "strict",
+        "source": "actual pi32v2 firmware in fm1-emu USB model",
+        "elapsed_host_seconds": 6.524816308,
+        "emulated_ms": 3643,
+        "i2s_frames": 135424,
+        "usb_audio_frames": 127911,
+        "usb_audio_underruns": 0,
+        "checks": [
+          "USB discovery",
+          "actual readback",
+          "parameter and preset",
+          "PCM repeat",
+          "coupling contrast",
+          "stale session",
+          "invalid range",
+          "panic tail",
+          "lease expiry",
+          "new session recovery"
+        ],
+        "target_callback_max_us": 655.875,
+        "audio_block_budget_us": 5804.988662131519
+      },
+      "target_metrics": {
+        "target_audio_blocks": "525",
+        "target_audio_max_ticks": "15741",
+        "target_reply_deferrals": "0"
+      },
+      "actual_gate_snapshot_examples": [
+        {
+          "sequence": 4,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            5,
+            3,
+            2,
+            0,
+            0,
+            0
+          ],
+          "values": [
+            76,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "sequence": 8,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            5,
+            3,
+            2,
+            0,
+            0,
+            0
+          ],
+          "values": [
+            76,
+            38,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "sequence": 12,
+          "gate": true,
+          "peak": 22,
+          "meters": [
+            2,
+            1,
+            1,
+            2,
+            1,
+            1
+          ],
+          "values": [
+            76,
+            38,
+            127,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "actual_state_replies": 17,
+      "wav": {
+        "xeno-coupled.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 1980,
+          "rms": 0.004663892311697843,
+          "sha256": "b56cb0808ccbf2c3445ae0857e5fa9f51d8e1139bdf86e00b48b68841f2164cc"
+        },
+        "xeno-full-session.wav": {
+          "frames": 135424,
+          "peak": 2419,
+          "nonzero": 9222,
+          "rms": 0.002517670753716804,
+          "sha256": "daca3b0c243caf89611a12e8aa3d266d4c1b47758fe40b34c06add49f4bba461"
+        },
+        "xeno-repeat.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 2412,
+          "rms": 0.004776673564287159,
+          "sha256": "732fb0a8f7db6f224d4368acb70b8c0ad3f9208c6971ec33c683348ff286c2ac"
+        },
+        "xeno-uncoupled.wav": {
+          "frames": 8192,
+          "peak": 2277,
+          "nonzero": 2412,
+          "rms": 0.004776673564287159,
+          "sha256": "732fb0a8f7db6f224d4368acb70b8c0ad3f9208c6971ec33c683348ff286c2ac"
+        }
+      },
+      "independent_pcm_repeat": true,
+      "independent_coupling_contrast": true,
+      "independent_peak_telemetry": true
+    }
+  },
+  "result": "PASS",
+  "provenance": {
+    "integration_repository": "https://github.com/techrote/FM-1-VIBEWARE/pull/15",
+    "integration_base_commit": "8c22f91d8d074b1d67ce4ad2a2a38c2931b56427",
+    "source_state": "Local qualification fixes over that published commit; this is independent execution of supplied built inputs, not an independent rebuild or a final-HEAD CI receipt.",
+    "emulator_commit": "736aded65c8e2e9d652cf595fca248734483a877",
+    "xenoresonator_commit": "fa27a317bb116f2afb62a710876f96314756f814",
+    "dinghy_commit": "92f17b28f2d05f2f78fd1b160b58475d518902c8",
+    "compiled_image_purpose": "Internal emulator input; not distributed or installable.",
+    "commands": [
+      "./cydaux-usb-qualification xeno-v3.xip.bin instruction metrics.txt instruction",
+      "./cydaux-usb-qualification xeno-v3.xip.bin strict metrics.txt strict"
+    ]
+  },
+  "cross_mode_wavs_identical": {
+    "xeno-uncoupled.wav": true,
+    "xeno-repeat.wav": true,
+    "xeno-coupled.wav": true
+  }
+}

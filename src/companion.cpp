@@ -291,7 +291,15 @@ bool CompanionSession::receive(const uint8_t* data, std::size_t size, uint32_t n
         return true;
     }
     if (packet.op == CompanionOp::Error && packet.payload[0] >= 1 && packet.payload[0] <= 6) {
-        lastReply_ = packet.sequence; hasReply_ = true; pending_ = false;
+        lastReply_ = packet.sequence; hasReply_ = true; pending_ = false; requestSent_ = false;
+        if (packet.payload[0] == static_cast<uint8_t>(CompanionError::Version) ||
+            packet.payload[0] == static_cast<uint8_t>(CompanionError::Session)) {
+            // An endpoint that retired the lease no longer supports mutations
+            // in this session. Explicit rediscovery owns recovery; nothing is
+            // replayed, and cached telemetry cannot keep the UI operational.
+            ready_ = false; hasSnapshot_ = false; timedOut_ = false;
+            identity_ = CompanionIdentity{}; snapshot_ = CompanionSnapshot{};
+        }
         ++rejected_; return false;
     }
     ++rejected_; return false;

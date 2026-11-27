@@ -62,8 +62,8 @@ int main() {
     // coalesced release coordinates and release outside the screen.
     model.page=Page::XY;
     ui.touch(TouchPhase::Down,30,100,model);
-    assert(recording.actions.size()==2 && recording.actions[0].type==ActionType::NoteOn &&
-           recording.actions[1].type==ActionType::SetXY);
+    assert(recording.actions.size()==2 && recording.actions[0].type==ActionType::SetXY &&
+           recording.actions[1].type==ActionType::NoteOn);
     ui.touch(TouchPhase::Move,150,120,model);
     ui.touch(TouchPhase::Up,INT_MAX,INT_MIN,model);
     assert(recording.actions[recording.actions.size()-2].type==ActionType::SetXY);
@@ -75,7 +75,7 @@ int main() {
 
     // Every existing context boundary retires the captured gate. A replacement
     // pointer-down also releases the prior finger before its own new attack.
-    for(unsigned boundary=0;boundary<7;++boundary){
+    for(unsigned boundary=0;boundary<9;++boundary){
         recording.clear();UiModel before=model;
         ui.touch(TouchPhase::Down,40,120,model);
         switch(boundary){
@@ -86,6 +86,8 @@ int main() {
             case 4:model.controlBank^=1;break;
             case 5:model.fullscreenXY=true;break;
             case 6:model.setupActive=true;break;
+            case 7:model.interactionEpoch++;break;
+            case 8:model.presetIndex++;break;
         }
         ui.touch(TouchPhase::Move,50,110,model);ui.touch(TouchPhase::Up,50,110,model);
         assert(recording.count(ActionType::NoteOn)==1&&recording.count(ActionType::NoteOff)==1);

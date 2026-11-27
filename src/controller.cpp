@@ -39,6 +39,7 @@ void Controller::setNotice(const char* s) {
     ++model_.revision;
 }
 void Controller::setSetup(bool active,const char* ssid,const char* password) {
+    if (model_.setupActive!=active) ++model_.interactionEpoch;
     model_.setupActive=active;
     std::snprintf(model_.setupSsid,sizeof(model_.setupSsid),"%s",ssid?ssid:"");
     std::snprintf(model_.setupPassword,sizeof(model_.setupPassword),"%s",password?password:"");
@@ -118,6 +119,7 @@ void Controller::rebuild() {
 }
 void Controller::selectProfile(std::size_t index) {
     if (index>=profileCount()) return;
+    ++model_.interactionEpoch;
     const bool wasLinked=model_.connection==ConnectionState::Connected ||
                          model_.connection==ConnectionState::Connecting;
     stopSequence();
@@ -277,6 +279,7 @@ bool Controller::sequenceOutput(void* context,uint8_t status,uint8_t note,uint8_
 }
 void Controller::stopSequence() { sequencer_.stop(sequenceOutput,this); }
 void Controller::panic() {
+    ++model_.interactionEpoch;
     stopSequence();
     if (companionProfile()) {
         discardPending();
@@ -319,6 +322,7 @@ void Controller::selectPreset(int preset) {
     const auto* profile=companionProfile();
     if (!profile || !active() || !companionAllows(CompanionPresets) ||
         preset<0 || preset>=profile->presetCount) return;
+    ++model_.interactionEpoch;
     stopSequence(); releaseNote();
     if (model_.transport==TransportKind::Demo) {
         model_.program=static_cast<uint8_t>(preset);
@@ -331,14 +335,15 @@ void Controller::dispatch(UiAction a) {
     switch (a.type) {
         case ActionType::SetPage:
             if (a.a>=0 && a.a<=5 && (a.a<=3 || companionProfile())) {
+                ++model_.interactionEpoch;
                 releaseNote(); model_.page=static_cast<Page>(a.a); model_.fullscreenXY=false;
             }
             break;
         case ActionType::SelectTrack:
-            if (a.a>=0 && a.a<p.tracks) { releaseNote(); model_.trackIndex=a.a; }
+            if (a.a>=0 && a.a<p.tracks) { ++model_.interactionEpoch; releaseNote(); model_.trackIndex=a.a; }
             break;
         case ActionType::NextProfile: selectProfile((model_.profileIndex+1)%profileCount()); break;
-        case ActionType::NextControlBank: model_.controlBank^=1; break;
+        case ActionType::NextControlBank: ++model_.interactionEpoch; model_.controlBank^=1; break;
         case ActionType::SetControl:
             if (a.a>=0 && a.a<4) setParameter(model_.trackIndex,a.a+model_.controlBank*4,a.b);
             break;
@@ -402,6 +407,7 @@ void Controller::dispatch(UiAction a) {
             break;
         case ActionType::SelectTransport:
             if (a.a<0 || a.a>3 || (a.a==3 && (!model_.nativeSupported || !companionProfile()))) break;
+            ++model_.interactionEpoch;
             stopSequence();
             discardPending(); releaseNote();
             companion_.reset(); sequencer_.abandonAfterPanic();
@@ -415,6 +421,7 @@ void Controller::dispatch(UiAction a) {
             break;
         case ActionType::ChannelDelta:
             if (companionProfile()) { setNotice("Endpoint controls use the negotiated instrument identity"); break; }
+            ++model_.interactionEpoch;
             releaseNote();
             channels_[model_.trackIndex]=static_cast<uint8_t>(1+(channels_[model_.trackIndex]-1+a.a%16+16)%16);
             resetValues(); setNotice("Channel changed; match the FM-1 settings");
@@ -430,8 +437,11 @@ void Controller::dispatch(UiAction a) {
         case ActionType::Configure: stopSequence(); releaseNote(); platformAction_=a; platformPending_=true; break;
         case ActionType::Refresh:
             if (companionProfile() && model_.connection==ConnectionState::Connected) {
-                const auto message=companion_.ready()?companion_.requestState(now_):companion_.discover(now_);
-                if (message.size && !enqueue(message)) companion_.cancelPending();
+                if (companionRetired_) beginCompanion();
+                else if (count_<kQueueSize) {
+                    const auto message=companion_.ready()?companion_.requestState(now_):companion_.discover(now_);
+                    if (message.size && !enqueue(message)) companion_.cancelPending();
+                }
             } else if (active() && p.sloopLive && model_.transport==TransportKind::Wifi) requestEditor(editorInfoRequest());
             else setNotice("Values update only when the FM-1 reports them");
             break;
@@ -475,7 +485,7 @@ void Controller::dispatch(UiAction a) {
             if (companionProfile()) sequencer_.setTempo(sequencer_.view().bpm+a.a);
             break;
         case ActionType::ToggleFullscreen:
-            if (model_.page==Page::XY && companionProfile()) { releaseNote(); model_.fullscreenXY=!model_.fullscreenXY; }
+            if (model_.page==Page::XY && companionProfile()) { ++model_.interactionEpoch; releaseNote(); model_.fullscreenXY=!model_.fullscreenXY; }
             break;
         case ActionType::NextTheme: model_.themeIndex=(model_.themeIndex+1)%3; break;
         case ActionType::SelectPreset: selectPreset(a.a); break;
@@ -493,6 +503,7 @@ bool Controller::takePlatformAction(UiAction& a) {
     a=platformAction_; platformPending_=false; return true;
 }
 void Controller::setConnection(ConnectionState state,bool mockPeer,const char* detail) {
+    ++model_.interactionEpoch;
     // The transport adapter owns release of its old physical connection. No
     // old sequencer command or pending mutation may cross the new epoch.
     sequencer_.abandonAfterPanic(); companion_.reset();
@@ -515,7 +526,7 @@ void Controller::beginCompanion() {
     sessionCounter_=(sessionCounter_+1)&kCompanionSessionMask;
     if (!sessionCounter_) sessionCounter_=1;
     companion_.begin(profile->instrument,sessionCounter_,now_);
-    companionTimeoutShown_=false; lastCompanionPoll_=now_;
+    companionTimeoutShown_=false; companionRetired_=false; lastCompanionPoll_=now_;
     const auto request=companion_.discover(now_);
     if (request.size && !enqueue(request)) companion_.cancelPending();
     setNotice("Discovering matching companion endpoint...");
@@ -529,6 +540,7 @@ void Controller::applyCompanionState() {
         if (snapshot.validMask & (1u<<i)) values_[0][i]={snapshot.values[i],origin};
         else values_[0][i]={-1,ValueOrigin::Unknown};
     }
+    if (model_.program!=snapshot.preset) ++model_.interactionEpoch;
     model_.program=snapshot.preset;
     model_.meterCount=snapshot.meterCount;
     model_.telemetryMeters=snapshot.meters;
@@ -573,10 +585,18 @@ void Controller::receive(const uint8_t* data,std::size_t size) {
         const bool wasReady=companion_.ready();
         if (companion_.receive(data,size,now_)) {
             if (!wasReady && companion_.ready()) {
-                setNotice("Endpoint matched: controls and native state ready");
+                setNotice("Endpoint matched: controls and state ready");
                 const auto request=companion_.requestState(now_);
                 if (request.size && !enqueue(request)) companion_.cancelPending();
             } else applyCompanionState();
+        }
+        if (wasReady && !companion_.ready()) {
+            // The peer has retired our session/version. Never retain its
+            // queued attack, local loop or apparent value confirmation.
+            discardPending(); sequencer_.abandonAfterPanic();
+            heldSent_=false; model_.noteHeld=false; ++model_.interactionEpoch;
+            companionRetired_=true; resetValues();
+            setNotice("Endpoint session lost; Refresh to reconnect");
         }
         rebuild();
         return;

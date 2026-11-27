@@ -32,7 +32,7 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 </section>
 <aside class="side">
 <section class="panel"><p class="eyebrow">Choose your instrument</p><label for="profile" class="mode-label">Firmware profile</label><select id="profile"><option>Loading…</option></select><p id="description" class="description"></p><div id="version" class="version"></div><p id="setupHint" class="setup-hint"></p></section>
-<section class="panel"><p class="eyebrow">Connection &amp; sound</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option><option value="native">Actual native audio engine</option></select><div class="buttons"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock device returns control values</label><div id="notice" class="notice" role="status"></div>
+<section class="panel"><p class="eyebrow">Connection &amp; sound</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option><option value="native">Actual native audio engine</option></select><div class="buttons"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock feedback (mock modes only)</label><div id="notice" class="notice" role="status"></div>
 <div class="buttons"><button id="audioStart">Enable sound</button><button id="panic">Panic</button></div>
 <label class="check" for="volume">Listening level <input id="volume" type="range" min="0" max="100" value="60" style="width:105px"></label>
 <div id="audioStatus" class="small" role="status">Choose ZaaggenZ Native or Xenoresonator Native, then enable sound.</div></section>
@@ -48,7 +48,7 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 const screen=document.getElementById("screen"),ctx=screen.getContext("2d");
 const profile=document.getElementById("profile"),transport=document.getElementById("transport");
 let state=null,revision=-1,imageSerial=0,queue=Promise.resolve(),activePointer=null,pendingMove=null,moveScheduled=false,spaceHeld=false;
-let lastPoll=false,errorTimer=null;
+let lastPoll=false,errorTimer=null,queuedMoveBody=null,networkMoveQueued=false;
 const pageNames=["play","mix","xy","link","sequence","presets"];
 const audioPlayer=new NativeAudioPlayer(control,stats=>{
  document.getElementById("audioStart").textContent=stats.running?"Stop sound":"Enable sound";
@@ -66,8 +66,13 @@ function update(next){
  profile.value=next.profile;transport.value=["demo","ble","wifi","native"][next.transport];
  transport.options[3].disabled=!next.nativeSupported;
  document.getElementById("audioStart").disabled=!next.nativeSupported;
+ document.getElementById("echo").disabled=next.transport===0||next.transport===3;
  document.getElementById("connect").textContent=next.transport===3?"Connect engine":"Connect mock";
- if(next.audio){audioPlayer.synchronize(next.audio.generation);}
+ document.querySelectorAll("[data-page]").forEach(button=>{
+  if(button.dataset.page==="mix")button.textContent=next.companionEnabled?"2 · State":"2 · Mixer";
+  button.disabled=!next.companionEnabled&&["sequence","presets"].includes(button.dataset.page);
+ });
+ if(next.audio){audioPlayer.synchronize(next.audio.generation);if(audioPlayer.running&&!next.audio.clockRunning)audioPlayer.stop().catch(showError);}
  transport.options[1].disabled=!next.bleSupported;
  document.getElementById("description").textContent=next.description;
  document.getElementById("version").textContent=next.sourceVersion?"Protocol reference · "+next.sourceVersion:"";
@@ -87,7 +92,16 @@ function control(name,value){
  return post("/api/control",{name:name,value:value||""});
 }
 function point(event){const box=screen.getBoundingClientRect();return{x:Math.round((event.clientX-box.left)*320/box.width),y:Math.round((event.clientY-box.top)*240/box.height)};}
-function touch(phase,p){return post("/api/touch",{phase:phase,x:p?p.x:0,y:p?p.y:0});}
+function touch(phase,p){
+ const body={phase:phase,x:p?p.x:0,y:p?p.y:0};
+ if(phase==="move"){
+  queuedMoveBody=body;
+  if(!networkMoveQueued){networkMoveQueued=true;queue=queue.then(()=>{networkMoveQueued=false;const latest=queuedMoveBody;queuedMoveBody=null;return latest?request("/api/touch",latest):null;}).then(next=>{if(next)update(next);}).catch(showError);}
+  return queue;
+ }
+ if(phase==="up"||phase==="cancel")queuedMoveBody=null;
+ return post("/api/touch",body);
+}
 function keyboardNote(velocity){return post("/api/note",{note:state&&state.note||60,velocity:velocity});}
 screen.addEventListener("pointerdown",event=>{if(activePointer!==null||event.button!==0)return;event.preventDefault();activePointer=event.pointerId;screen.setPointerCapture(event.pointerId);screen.focus();touch("down",point(event));});
 screen.addEventListener("pointermove",event=>{if(activePointer!==event.pointerId)return;event.preventDefault();pendingMove=point(event);if(!moveScheduled){moveScheduled=true;setTimeout(()=>{moveScheduled=false;if(pendingMove&&activePointer!==null){const p=pendingMove;pendingMove=null;touch("move",p);}},35);}});
@@ -95,17 +109,17 @@ function releasePointer(event,cancel){if(activePointer!==event.pointerId)return;
 screen.addEventListener("pointerup",event=>releasePointer(event,false));
 screen.addEventListener("pointercancel",event=>releasePointer(event,true));
 screen.addEventListener("lostpointercapture",()=>{if(activePointer!==null){activePointer=null;pendingMove=null;touch("cancel");}});
-window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);}});
-window.addEventListener("pagehide",()=>{audioPlayer.running=false;audioPlayer.flush();fetch("/api/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"audio-clock",value:"off"}),keepalive:true}).catch(()=>{});});
+window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running||audioPlayer.starting)audioPlayer.stop().catch(showError);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running||audioPlayer.starting)audioPlayer.stop().catch(showError);}});
+window.addEventListener("pagehide",()=>{audioPlayer.invalidate();fetch("/api/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"audio-clock",value:"off"}),keepalive:true}).catch(()=>{});});
 document.querySelectorAll("[data-page]").forEach(button=>button.addEventListener("click",()=>control("page",button.dataset.page)));
 profile.addEventListener("change",async()=>{
  await control("profile",profile.value);
  if(state&&state.nativeSupported){await control("transport","native");await control("connect");}
- else if(audioPlayer.running)await audioPlayer.stop();
+ else if(audioPlayer.running||audioPlayer.starting)await audioPlayer.stop();
 });
 transport.addEventListener("change",async()=>{
- if(transport.value!=="native"&&audioPlayer.running)await audioPlayer.stop();
+ if(transport.value!=="native"&&(audioPlayer.running||audioPlayer.starting))await audioPlayer.stop();
  await control("transport",transport.value);
 });
 document.getElementById("audioStart").addEventListener("click",async()=>{

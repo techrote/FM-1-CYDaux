@@ -46,6 +46,7 @@ private:
     PerformanceSequencer sequencer_{};
     uint32_t sessionCounter_ = 0, lastCompanionPoll_ = 0;
     bool companionTimeoutShown_ = false;
+    bool companionRetired_ = false;
     bool active() const;
     void rebuild();
     void resetValues();

@@ -5,8 +5,9 @@
 #include <cstdint>
 
 namespace fm1 {
-// Experimental CYDaux endpoint protocol. This is implemented by the native
-// evaluator, not by unmodified Fune or the legacy firmware profiles.
+// Experimental CYDaux endpoint protocol. Implemented by the native evaluator
+// and the separate VIBEWARE USB target adapter; not by unmodified Fune or the
+// legacy firmware profiles. Emulation is separate from physical qualification.
 constexpr uint8_t kCompanionMajor = 1;
 constexpr uint8_t kCompanionMinor = 0;
 constexpr uint32_t kCompanionSessionMask = 0x0fffffff;
@@ -84,7 +85,7 @@ struct CompanionSnapshot {
     bool gate = false, playing = false;
     uint8_t meterCount = 0;
     std::array<uint8_t, kCompanionMeters> meters{};
-    uint8_t outputPeak = 0; // Latest rendered PCM block peak, independently scaled 0..127.
+    uint8_t outputPeak = 0; // Actual PCM peak since previous snapshot, independently scaled 0..127.
     uint16_t revision = 0;
 };
 MidiMessage encodeCompanion(const CompanionPacket&);

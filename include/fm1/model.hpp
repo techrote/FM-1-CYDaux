@@ -62,6 +62,7 @@ struct UiModel {
     char setupSsid[24] = "", setupPassword[16] = "";
     uint16_t bpm = 120;
     uint32_t transmitted = 0, received = 0, revision = 0;
+    uint32_t interactionEpoch = 0; // Retires touch captures across round-trip context changes.
     char notice[72] = "Demo: no instrument needed";
 };
 enum class ActionType : uint8_t {

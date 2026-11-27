@@ -90,16 +90,24 @@ def main() -> None:
     shutil.copy2(ROOT / "LICENSE", destination / "LICENSE")
     shutil.copy2(ROOT / "THIRD_PARTY.md", destination / "THIRD_PARTY.md")
     shutil.copytree(ROOT / "licenses", destination / "licenses")
-    (destination / "docs").mkdir()
-    shutil.copy2(ROOT / "docs" / "upstream-sources.json",
-                 destination / "docs" / "upstream-sources.json")
-    for name in ("companion-platform.md", "virtual-evaluator.md", "companion-owner-guide.md"):
-        if (ROOT / "docs" / name).is_file():
-            shutil.copy2(ROOT / "docs" / name, destination / "docs" / name)
+    # Keep linked owner procedures, source pins, screenshots and evidence
+    # together; a three-file extract left the physical-session and virtual
+    # evidence links dangling in otherwise self-contained packages.
+    shutil.copytree(ROOT / "docs", destination / "docs")
+    if (ROOT / "AGENTS.md").is_file():
+        shutil.copy2(ROOT / "AGENTS.md", destination / "AGENTS.md")
+    (destination / "SOURCE.md").write_text(
+        "# Exact source\n\n" + manifest["source_repository"] + "/tree/" +
+        manifest["source_commit"] + "\n\nSource tree: `" +
+        manifest["source_tree"] + "`. See manifest.json for every shipped file hash.\n",
+        encoding="utf-8")
     if args.kind == "simulator":
         # Preserve exact engine sources and their original notices. An original
         # application's license is not a blanket grant for these components.
         shutil.copytree(ROOT / "third_party", destination / "third_party")
+        (destination / "simulator").mkdir()
+        for name in ("README.md", "PACKAGE-README.md"):
+            shutil.copy2(ROOT / "simulator" / name, destination / "simulator" / name)
         if (ROOT / "docs" / "media").is_dir():
             shutil.copytree(ROOT / "docs" / "media", destination / "media")
         manifest["dependencies"] = [json.loads(path.read_text(encoding="utf-8"))

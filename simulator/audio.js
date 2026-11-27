@@ -14,30 +14,56 @@ class NativeAudioPlayer {
     this.expectedGeneration = null;
     this.generation = null;
     this.serial = 0;
+    this.hasSerial = false;
     this.underruns = 0;
     this.blocks = 0;
+    this.starting = false;
+    this.runToken = 0;
+    this.pumpTask = null;
     this.volume = 0.6;
   }
   async start() {
-    if (this.running) return;
-    const Audio = window.AudioContext || window.webkitAudioContext;
-    if (!Audio) throw new Error("This browser does not provide Web Audio");
-    if (!this.context) {
-      this.context = new Audio({latencyHint: "interactive"});
-      this.gain = this.context.createGain();
-      this.gain.gain.value = this.volume;
-      this.gain.connect(this.context.destination);
+    if (this.running || this.starting) return;
+    this.starting = true;
+    const token = ++this.runToken;
+    try {
+      // PR #3 independently identified that an old HTTP request may still be
+      // rendering. Drain that retired pump before opening a new clock lease.
+      if (this.pumpTask) await this.pumpTask;
+      if (token !== this.runToken) return;
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) throw new Error("This browser does not provide Web Audio");
+      if (!this.context) {
+        this.context = new Audio({latencyHint: "interactive"});
+        this.gain = this.context.createGain();
+        this.gain.gain.value = this.volume;
+        this.gain.connect(this.context.destination);
+      }
+      await this.context.resume();
+      if (token !== this.runToken) return;
+      await this.control("audio-clock", "on");
+      if (token !== this.runToken) {
+        // A pagehide keepalive Stop can overtake a queued clock-on. Retire
+        // that late lease only if no newer start/run has taken ownership.
+        if (!this.running && !this.starting) await this.control("audio-clock", "off");
+        return;
+      }
+      this.running = true;
+      this.flush();
+      this.report({running: true, blocks: this.blocks, underruns: this.underruns, ahead: 0});
+      this.pumpTask = this.pump(token);
+    } finally {
+      if (token === this.runToken) this.starting = false;
     }
-    await this.context.resume();
-    await this.control("audio-clock", "on");
-    this.running = true;
-    this.flush();
-    this.report({running: true, blocks: this.blocks, underruns: this.underruns, ahead: 0});
-    this.pump();
   }
-  async stop() {
+  invalidate() {
+    ++this.runToken;
+    this.starting = false;
     this.running = false;
     this.flush();
+  }
+  async stop() {
+    this.invalidate();
     this.report({running: false, blocks: this.blocks, underruns: this.underruns, ahead: 0});
     await this.control("audio-clock", "off");
   }
@@ -61,6 +87,7 @@ class NativeAudioPlayer {
     this.nodes.clear();
     this.generation = null;
     this.serial = 0;
+    this.hasSerial = false;
     this.nextTime = this.context ? this.context.currentTime + 0.045 : 0;
   }
   static decode(data) {
@@ -76,8 +103,8 @@ class NativeAudioPlayer {
     for (let i = 0; i < frames; ++i) samples[i] = view.getInt16(24 + i * 2, true) / 32768;
     return {rate, generation, serial, frames, samples};
   }
-  async pump() {
-    while (this.running) {
+  async pump(token) {
+    while (this.running && token === this.runToken) {
       const epoch = this.epoch;
       try {
         if (this.context.state !== "running") {
@@ -93,16 +120,20 @@ class NativeAudioPlayer {
           body: JSON.stringify({frames: 1024})
         });
         if (!response.ok) throw new Error("Native audio transport failed");
+        if (token !== this.runToken) return;
         const block = NativeAudioPlayer.decode(await response.arrayBuffer());
+        if (token !== this.runToken) return;
         if (!this.running || epoch !== this.epoch) continue;
         if (this.expectedGeneration !== null && block.generation !== this.expectedGeneration) {
           // A late response from a superseded preset/session is never audible.
           await new Promise(resolve => setTimeout(resolve, 8));
           continue;
         }
-        if (this.serial && ((block.serial - this.serial) >>> 0) > 0x7fffffff)
+        const delta = (block.serial - this.serial) >>> 0;
+        if (this.hasSerial && (delta === 0 || delta > 0x7fffffff))
           throw new Error("Stale native audio sequence");
         this.serial = block.serial;
+        this.hasSerial = true;
         if (this.generation !== block.generation) {
           this.generation = block.generation;
           this.nextTime = this.context.currentTime + 0.045;
@@ -128,6 +159,7 @@ class NativeAudioPlayer {
         this.report({running: true, blocks: this.blocks, underruns: this.underruns,
                      ahead: this.nextTime - this.context.currentTime, rate: block.rate});
       } catch (error) {
+        if (token !== this.runToken) return;
         this.running = false;
         this.flush();
         this.report({running: false, error, blocks: this.blocks, underruns: this.underruns, ahead: 0});

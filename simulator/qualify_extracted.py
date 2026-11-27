@@ -44,8 +44,16 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
         argv = [str(candidates[0]), "--no-open", "--port", "0"]
     else:
         argv = [sys.executable, str(directory / "run.py"), "--binary", str(binary), "--no-open", "--port", "0"]
+    environment = os.environ.copy()
+    if standalone and os.name == "nt":
+        # Prove the bundled launcher does not discover the runner's installed
+        # Python or compiler. Windows system DLL/utility paths remain present.
+        system = Path(environment.get("SystemRoot", r"C:\Windows"))
+        environment["PATH"] = os.pathsep.join((str(system / "System32"), str(system)))
+        environment.pop("PYTHONHOME", None)
+        environment.pop("PYTHONPATH", None)
     process = subprocess.Popen(argv, cwd=directory, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               text=True, encoding="utf-8", errors="replace")
+                               text=True, encoding="utf-8", errors="replace", env=environment)
     lines = queue.Queue()
     def read_lines():
         for line in process.stdout:
@@ -53,6 +61,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
     reader = threading.Thread(target=read_lines, daemon=True)
     reader.start()
     receipt = {"launcher": "standalone" if standalone else "python", "path_with_spaces_unicode": True,
+               "python_and_compilers_removed_from_path": standalone and os.name == "nt",
                "source_kind": "native-engine", "physical_qualification": False, "instruments": []}
     try:
         deadline = time.monotonic() + 30
@@ -118,7 +127,15 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
         receipt["result"]="PASS"
         return receipt
     finally:
-        process.terminate()
+        if os.name == "nt" and process.poll() is None:
+            # A onefile bootloader owns a child interpreter, which owns the
+            # native engine. Terminate this launched tree, not just its parent,
+            # so an orphan cannot lock the extracted EXE during cleanup.
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+                           timeout=10, check=False)
+        else:
+            process.terminate()
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:

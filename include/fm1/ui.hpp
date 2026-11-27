@@ -61,6 +61,8 @@ class Ui {
   int noteMinimum_ = 0, noteMaximum_ = 127;
   Page page_ = Page::Play;
   uint8_t profile_ = 0, track_ = 0, bank_ = 0;
+  uint8_t preset_ = 0;
+  uint32_t interactionEpoch_ = 0;
   TransportKind transport_ = TransportKind::Demo;
   ConnectionState connection_ = ConnectionState::Offline;
   bool setup_ = false, fullscreen_ = false, gatedXY_ = false, stepMoved_ = false;

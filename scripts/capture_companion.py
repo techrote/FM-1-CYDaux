@@ -44,9 +44,11 @@ def main() -> None:
                 commands.append(text.replace(scratch, "<temporary>"))
                 return result
 
-            def sound(blocks: int = 4) -> None:
+            def sound(blocks: int = 4, frames: int = 4096) -> dict:
+                result = {}
                 for _ in range(blocks):
-                    command(f"audio 4096 {temporary / 'instrument.pcm'}")
+                    result = command(f"audio {frames} {temporary / 'instrument.pcm'}")
+                return result
 
             def capture(name: str) -> None:
                 state = command(f"frame {temporary / 'frame.ppm'}")
@@ -74,29 +76,36 @@ def main() -> None:
                 command("parameter 0 90")
                 command("parameter 1 74")
                 command("note 60 105")
-                sound()
+                # Xeno is percussive; show its genuine first state interval,
+                # rather than a settled frame long after the transient ended.
+                tone_blocks, tone_frames = (4, 4096) if prefix == "zaaggenz" else (1, 3072)
+                sound(tone_blocks, tone_frames)
                 capture(f"companion-{prefix}-play.png")
                 command("page presets")
                 sound(1)
                 capture(f"companion-{prefix}-presets.png")
                 command("page sequence")
                 command("sequence")
-                sound(9)
+                state = sound(9)
+                for _ in range(64):
+                    if state.get("outputPeak", 0):
+                        break
+                    state = sound(1, 512)
                 capture(f"companion-{prefix}-sequence.png")
                 command("sequence")
                 command("page xy")
                 command("down 155 120")
-                sound()
+                sound(tone_blocks, tone_frames)
                 capture(f"companion-{prefix}-xy.png")
                 command("up 155 120")
                 command("tap 265 116")
                 command("down 190 108")
-                sound()
+                sound(tone_blocks, tone_frames)
                 capture(f"companion-{prefix}-fullscreen.png")
                 command("cancel")
                 command("page mix")
                 command("note 55 100")
-                sound()
+                sound(tone_blocks, tone_frames)
                 capture(f"companion-{prefix}-state.png")
                 command("panic")
                 command("disconnect")

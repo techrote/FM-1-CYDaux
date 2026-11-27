@@ -99,7 +99,10 @@ struct Probe {
         for(unsigned i=0;i<1000;++i)
             ui.touch(fm1::TouchPhase::Move,14+static_cast<int>(i*37%202),66+static_cast<int>(i*19%122),controller.model());
         coalescedBurstMessages=drain();
-        if(coalescedBurstMessages>4)throw std::runtime_error("1000 XY moves were not bounded/coalesced");
+        // The first XY pair precedes its attack; the subsequent move pair
+        // cannot coalesce across that musical ordering barrier. Five messages
+        // are therefore the bounded maximum: XY, Note, latest XY.
+        if(coalescedBurstMessages>5)throw std::runtime_error("1000 XY moves were not bounded/coalesced");
         ui.cancelTouch();drain();
         bool finger=false;
         uint32_t nextFrame=0;

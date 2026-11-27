@@ -142,6 +142,8 @@ Unicode. The loopback HTTP API never exposes arbitrary file path commands.
 ```console
 python -m unittest discover -s simulator -p "test_*.py" -v
 node simulator/test_frontend.cjs build/fm1-simulator
+node simulator/test_audio_player.cjs
+node simulator/test_audio_lifecycle.cjs
 python simulator/qualify_extracted.py dist/cydaux-simulator-linux --output build/extracted.json
 ```
 
@@ -151,11 +153,15 @@ saturation and immediate panic. Python tests exercise actual touch-to-sound,
 state readback, ten presets, audio framing, paths with spaces/Unicode, lost
 consumption, disconnection and sample-clock ownership.
 
-The Node frontend test uses a DOM shim and is labelled accordingly. Actual
+The Node frontend test uses a DOM shim and is labelled accordingly. The audio
+player test uses a deterministic Web Audio test double to exercise pending
+start/stop, rapid restart with stale fetches, framing and queue bounds. The
+independently contributed lifecycle regression also requires the previous PCM
+pump to finish before the next clock lease begins. Actual
 browser execution is separate:
 
 ```console
-python -m pip install playwright==1.58.0
+python -m pip install playwright==1.62.0
 python simulator/qualify_browser.py --binary build/fm1-simulator --chromium /usr/bin/google-chrome --output build/browser-evidence
 ```
 
@@ -164,6 +170,22 @@ copied into real Web Audio buffers, exercises touch/keyboard/sequence and buffer
 flush behavior, and captures desktop/mobile screenshots. It establishes browser
 software execution, not subjective listening or physical speaker output. Its
 JSON receipt records the actual browser version and scheduling counters.
+Partial receipts and failure screenshots preserve the specific stage and shared
+controller/audio state when an acceptance step fails.
+
+## Record actual audio and audiovisual examples
+
+```console
+python simulator/render_audio_examples.py --binary build/fm1-simulator --output build/companion-media --video
+```
+
+This produces ten preset WAVs and two eight-second touchscreen/sequence
+performances from the actual engines. `--video` requires `ffmpeg` and joins
+the captured shared-renderer frames with the generated PCM; omit it for WAVs
+and the listening index. `audio-evidence.json` records source revisions,
+sample rates, PCM hashes, peak/RMS and clipped-sample counts. `Listen.html`
+opens the local recordings. The videos capture software execution; they are
+not physical hardware or acoustic recordings.
 
 ## CPU-emulator boundary
 
