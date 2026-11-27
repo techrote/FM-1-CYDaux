@@ -32,6 +32,8 @@ bool VirtualInstrument::select(const char* id) {
         zg_engine_init(&zaag_, ZG_SAMPLE_RATE);
     } else if (profile_->instrument == CompanionInstrument::Xenoresonator) {
         xeno_reset(&xeno_, 0x43594431u, 0);
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        orbit_reset(&orbit_, 0);
     } else {
         profile_ = nullptr;
         return false;
@@ -64,16 +66,20 @@ void VirtualInstrument::panic() {
         zaag_.exciter_envelope = 0;
     } else if (profile_ && profile_->instrument == CompanionInstrument::Xenoresonator) {
         xeno_panic(&xeno_);
+    } else if (profile_ && profile_->instrument == CompanionInstrument::Grimoire) {
+        orbit_panic(&orbit_);
     }
     ++generation_;
     ++revision_;
 }
 
 uint32_t VirtualInstrument::sampleRate() const {
+    if (profile_ && profile_->instrument == CompanionInstrument::Grimoire) return ORBIT_RATE;
     return profile_ && profile_->instrument == CompanionInstrument::Xenoresonator ? XENO_RATE : ZG_SAMPLE_RATE;
 }
 const char* VirtualInstrument::name() const {
     if (!profile_) return "No native engine";
+    if (profile_->instrument == CompanionInstrument::Grimoire) return "VIBEWARE Grimoire Orbit Gate";
     return profile_->instrument == CompanionInstrument::ZaaggenZ ? "ZaaggenZ native procedural core" : "VIBEWARE Xenoresonator";
 }
 const char* VirtualInstrument::mode() const {
@@ -259,6 +265,10 @@ bool VirtualInstrument::setParameter(unsigned index, unsigned normalized) {
         }
         patch.mode = ZG_NATIVE;
         zg_engine_set_patch(&zaag_, &patch);
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        if (index == 0) orbit_xy(&orbit_, value, orbit_.y);
+        else if (index == 1) orbit_xy(&orbit_, orbit_.x, value);
+        else return false;
     } else {
         switch (index) {
         case 0: xeno_controls(&xeno_, value, xeno_.damping, xeno_.coupling); break;
@@ -282,6 +292,9 @@ bool VirtualInstrument::setPreset(unsigned index) {
         patch.mode = ZG_NATIVE;
         zg_engine_set_patch(&zaag_, &patch);
         note_ = zaag_.note;
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        orbit_reset(&orbit_, index);
+        note_ = 36 + orbit_.x * 23u / 127u;
     } else {
         xeno_reset(&xeno_, 0x43594431u, index);
         note_ = xeno_.note;
@@ -297,6 +310,9 @@ void VirtualInstrument::note(unsigned pitch, unsigned velocity) {
     if (profile_->instrument == CompanionInstrument::ZaaggenZ) {
         if (velocity) zg_engine_note_on(&zaag_, pitch, velocity, 0);
         else zg_engine_note_off(&zaag_, pitch);
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        // Note is a captured gesture gate; pitch lives in pitch_x.
+        orbit_gate(&orbit_, velocity != 0);
     } else {
         if (velocity) xeno_strike(&xeno_, pitch, velocity);
         else xeno_release(&xeno_);
@@ -320,6 +336,10 @@ CompanionSnapshot VirtualInstrument::snapshot() const {
         const uint8_t values[] = {p.grit, p.vowel, p.motion, p.family, p.attack, p.release, p.level[ZG_BODY], p.level[ZG_SUB]};
         for (unsigned i = 0; i < kCompanionParameters; ++i)
             result.values[i] = companionParameterNormalized(profile_->parameters[i], values[i]);
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        result.values[0] = orbit_.x;
+        result.values[1] = orbit_.y;
+        result.meterCount = 2;
     } else {
         const uint8_t values[] = {xeno_.excitation, xeno_.damping, xeno_.coupling, xeno_.material};
         for (unsigned i = 0; i < 4; ++i)
@@ -346,6 +366,13 @@ bool VirtualInstrument::render(int16_t* destination, std::size_t frames) {
                     stemPeaks[stem] = std::max(stemPeaks[stem], magnitude(stems_[i * ZG_STEM_COUNT + stem]));
         }
         for (unsigned i = 0; i < ZG_LAYER_COUNT; ++i) meters_[i] = std::max(meters_[i], meter(stemPeaks[i], 32768));
+    } else if (profile_->instrument == CompanionInstrument::Grimoire) {
+        // Bounded actual envelope and energy samples, retaining interval maxima.
+        for (std::size_t offset = 0; offset < frames; offset += 64) {
+            orbit_render(&orbit_, destination + offset, std::min<std::size_t>(64, frames - offset));
+            meters_[0] = std::max(meters_[0], meter(orbit_.env, 32767));
+            meters_[1] = std::max(meters_[1], meter(orbit_.energy, 28000));
+        }
     } else {
         xeno_render(&xeno_, destination, frames);
         for (unsigned i = 0; i < XENO_MODES; ++i) meters_[i] = std::max(meters_[i], meter(xeno_mode_level(&xeno_, i), 131070));

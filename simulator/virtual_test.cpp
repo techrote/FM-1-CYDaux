@@ -124,6 +124,34 @@ int main() {
         }
     }
 
+    // Third consumer uses the actual Orbit engine: gesture X/Y, three
+    // materials, gate ownership, stale release, deterministic audio and silence.
+    std::array<uint64_t,3> orbitHashes{};
+    for (uint8_t p=0;p<3;++p) {
+        negotiate(endpoint,"grimoire-native",31);
+        assert(endpoint.sampleRate()==ORBIT_RATE);
+        assert(endpoint.receive(request(CompanionOp::SetPreset,31,2,{p})));
+        assert(endpoint.receive(request(CompanionOp::SetParameter,31,3,{0,20})));
+        assert(endpoint.receive(request(CompanionOp::SetParameter,31,4,{1,90})));
+        assert(endpoint.receive(request(CompanionOp::Note,31,5,{48,100})));
+        drain(endpoint);
+        assert(endpoint.render(pcm.data(),pcm.size()));
+        orbitHashes[p]=checksum(pcm.data(),pcm.size());
+        const auto state=endpoint.snapshot();
+        assert(state.validMask==3 && state.values[0]==20 && state.values[1]==90);
+        assert(state.gate && state.meterCount==2 && state.meters[0]>0 && state.outputPeak>0);
+        for(uint8_t prev=0;prev<p;++prev)assert(orbitHashes[p]!=orbitHashes[prev]);
+        assert(endpoint.receive(request(CompanionOp::Note,31,6,{49,0})));
+        assert(endpoint.snapshot().gate);
+        assert(endpoint.receive(request(CompanionOp::Note,31,7,{48,0})));
+        assert(!endpoint.snapshot().gate);
+        assert(endpoint.receive(request(CompanionOp::Panic,31,8)));
+        assert(endpoint.render(pcm.data(),pcm.size()));
+        assert(std::all_of(pcm.begin(),pcm.end(),[](int16_t s){return s==0;}));
+        endpoint.disconnect();
+        assert(!endpoint.receive(request(CompanionOp::Note,31,9,{48,100})));
+    }
+
     // Bounded outgoing state: saturation never allocates or prevents panic.
     negotiate(endpoint,"xenoresonator-native",13);
     for(uint16_t sequence=2;sequence<200;++sequence)

@@ -92,7 +92,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             return json.loads(post("/api/control", {"name": name, "value": value}))
         if b"NativeAudioPlayer" not in get("/audio.js") or b"Enable sound" not in get("/"):
             raise RuntimeError("Extracted frontend is incomplete")
-        for instrument, rate in (("xenoresonator-native",24000),("zaaggenz-native",44100)):
+        for instrument, rate in (("xenoresonator-native",24000),("zaaggenz-native",44100),("grimoire-native",24000)):
             control("profile",instrument)
             control("transport","native")
             state=control("connect")

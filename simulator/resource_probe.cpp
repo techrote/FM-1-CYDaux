@@ -194,6 +194,8 @@ int main(int argc,char** argv) {
         {Probe probe;probe.run("zaaggenz-native",blocks);}
         std::cout<<',';
         {Probe probe;probe.run("xenoresonator-native",blocks);}
+        std::cout<<',';
+        {Probe probe;probe.run("grimoire-native",blocks);}
         std::cout<<"]}\n";
     }catch(const std::exception& error){std::cerr<<"resource probe failed: "<<error.what()<<'\n';return 1;}
 }

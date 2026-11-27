@@ -35,11 +35,11 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 <section class="panel"><p class="eyebrow">Connection &amp; sound</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option><option value="native">Actual native audio engine</option></select><div class="buttons"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock feedback (mock modes only)</label><div id="notice" class="notice" role="status"></div>
 <div class="buttons"><button id="audioStart">Enable sound</button><button id="panic">Panic</button></div>
 <label class="check" for="volume">Listening level <input id="volume" type="range" min="0" max="100" value="60" style="width:105px"></label>
-<div id="audioStatus" class="small" role="status">Choose ZaaggenZ Native or Xenoresonator Native, then enable sound.</div></section>
+<div id="audioStatus" class="small" role="status">Choose ZaaggenZ, Xenoresonator or Grimoire, then enable sound.</div></section>
 <section class="panel"><p class="eyebrow">Current control bank</p><div id="values" class="values"></div><p class="small" style="margin-bottom:0">Unknown values stay blank until changed or received. “Sent” is a command; “Device” is returned state from a real connection. Mock replies stay “Demo”. “Native” is actual portable-engine readback on this computer.</p></section>
 </aside>
 </div>
-<footer class="footnote"><p>The display uses the same interface and touch handling as the CYD firmware.</p><p>ZaaggenZ and Xenoresonator generate actual native-core audio. No FM-1 CPU, radio or physical hardware is emulated.</p></footer>
+<footer class="footnote"><p>The display uses the same interface and touch handling as the CYD firmware.</p><p>ZaaggenZ, Xenoresonator and Grimoire generate actual native-core audio. No FM-1 CPU, radio or physical hardware is emulated.</p></footer>
 </main>
 <div id="error" class="error" role="alert"></div>
 <script src="/audio.js"></script>

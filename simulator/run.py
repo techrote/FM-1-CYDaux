@@ -59,13 +59,13 @@ def find_binary(explicit: str | None = None, build: bool = True) -> Path:
     sources = sorted((ROOT / "src").glob("*.cpp")) + [HERE / "main.cpp", HERE / "virtual_instrument.cpp"]
     c_sources = [ROOT / "third_party" / "zaaggenz" / "src" / name for name in (
         "dsp.c", "engine.c", "presets.c", "source_bank.c"
-    )] + [ROOT / "third_party" / "xenoresonator" / "xeno.c"]
+    )] + [ROOT / "third_party" / "xenoresonator" / "xeno.c", ROOT / "third_party" / "grimoire" / "orbit.c"]
     if not all(source.is_file() for source in sources + c_sources):
         raise RuntimeError("The simulator sources are incomplete; extract the whole source package")
     print("Building shared CYD controller and actual native instrument cores...", flush=True)
     includes = ["-I", str(ROOT / "include"), "-I", str(HERE),
                 "-I", str(ROOT / "third_party" / "zaaggenz" / "include"),
-                "-I", str(ROOT / "third_party" / "xenoresonator")]
+                "-I", str(ROOT / "third_party" / "xenoresonator"), "-I", str(ROOT / "third_party" / "grimoire")]
     objects = []
     for source in c_sources:
         obj = output.parent / (source.stem + "-native.o")

@@ -47,7 +47,7 @@ class ActualInstrumentAudioTests(unittest.TestCase):
         return data[24:]
 
     def test_actual_preset_pcm_is_nonzero_and_distinct(self):
-        for instrument, count in (("xenoresonator-native", 4), ("zaaggenz-native", 6)):
+        for instrument, count in (("xenoresonator-native", 4), ("zaaggenz-native", 6), ("grimoire-native", 3)):
             self.connect(instrument)
             hashes = []
             for preset in range(count):
@@ -63,7 +63,7 @@ class ActualInstrumentAudioTests(unittest.TestCase):
             self.assertEqual(len(set(hashes)), count, instrument)
 
     def test_touch_changes_actual_audio_and_roundtrips_native_state(self):
-        for instrument in ("xenoresonator-native", "zaaggenz-native"):
+        for instrument in ("xenoresonator-native", "zaaggenz-native", "grimoire-native"):
             self.connect(instrument)
             recordings = []
             for x in (15, 149):
@@ -80,7 +80,7 @@ class ActualInstrumentAudioTests(unittest.TestCase):
             self.assertNotEqual(recordings[0], recordings[1], instrument)
 
     def test_disconnection_and_panic_silence_the_core(self):
-        for instrument in ("xenoresonator-native", "zaaggenz-native"):
+        for instrument in ("xenoresonator-native", "zaaggenz-native", "grimoire-native"):
             self.connect(instrument)
             self.engine.command("note 48 100")
             self.assertNotEqual(self.pcm(1024), bytes(2048))
@@ -94,6 +94,29 @@ class ActualInstrumentAudioTests(unittest.TestCase):
             self.assertEqual(self.pcm(1024), bytes(2048))
             self.engine.command("connect")
             self.assertEqual(self.pcm(1024), bytes(2048), "reconnect must not replay note-on")
+
+    def test_orbit_gesture_pitch_material_and_release(self):
+        state = self.connect("grimoire-native")
+        self.assertEqual(state["controls"][0]["value"], 48)
+        self.assertEqual(state["controls"][1]["value"], 70)
+        def gesture(x, y):
+            self.engine.command("preset 0")
+            self.engine.command("page xy")
+            self.engine.command("down %d %d" % (x,y))
+            state = self.engine.state
+            self.assertTrue(state["noteHeld"])
+            self.assertEqual(state["controls"][0]["origin"], "native-engine")
+            audio = self.pcm(4096)
+            self.engine.command("up 500 500")
+            self.assertFalse(self.engine.state["noteHeld"])
+            self.engine.command("panic")
+            self.assertEqual(self.pcm(1024), bytes(2048))
+            return audio
+        low = gesture(25, 120)
+        self.assertNotEqual(low, bytes(len(low)))
+        self.assertEqual(low, gesture(25, 120))
+        self.assertNotEqual(low, gesture(195, 120))
+        self.assertNotEqual(low, gesture(25, 85))
 
     def test_sample_clock_owns_sequence_timing_without_double_counting(self):
         self.connect()

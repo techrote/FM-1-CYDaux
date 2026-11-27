@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/techrote/FM-1-VIBEWARE",
+  "revision": "ca1b83a5f6c8f1e87dea671f93f7e2a6d3bc432f",
+  "path": "instruments/grimoire; companion/grimoire/profile.json",
+  "license": "LicenseRef-Owner-Provided-Unspecified",
+  "authority": "Owner authorized issue-scoped integration. No permissive redistribution grant asserted.",
+  "files_git_blob_sha1": {
+    "orbit.c": "191827b6b08ef718758e84ffd4c35b492cbdc5a3",
+    "orbit.h": "9cd23e73a6bd6903c2c712fef86110875c148de4",
+    "README.md": "6ea1852034b0f1e5f9146702519c027c3730f4a0",
+    "profile.json": "ae0b0f377f81a0063c7fd0e98a55d67b2ae4e539"
+  },
+  "modifications": "None; adapter is separate."
+}

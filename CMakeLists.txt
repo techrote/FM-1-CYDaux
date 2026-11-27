@@ -19,8 +19,8 @@ endif()
 add_library(fm1virtual simulator/virtual_instrument.cpp
     third_party/zaaggenz/src/dsp.c third_party/zaaggenz/src/engine.c
     third_party/zaaggenz/src/presets.c third_party/zaaggenz/src/source_bank.c
-    third_party/xenoresonator/xeno.c)
-target_include_directories(fm1virtual PUBLIC simulator third_party/zaaggenz/include third_party/xenoresonator)
+    third_party/xenoresonator/xeno.c third_party/grimoire/orbit.c)
+target_include_directories(fm1virtual PUBLIC simulator third_party/zaaggenz/include third_party/xenoresonator third_party/grimoire)
 target_link_libraries(fm1virtual PUBLIC fm1core)
 add_executable(fm1-simulator simulator/main.cpp)
 target_link_libraries(fm1-simulator PRIVATE fm1virtual)

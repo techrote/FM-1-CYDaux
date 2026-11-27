@@ -18,7 +18,7 @@ constexpr std::size_t kCompanionMeters = 6;
 constexpr std::size_t kCompanionPresets = 8;
 constexpr std::size_t kCompanionMaxPayload = 48;
 
-enum class CompanionInstrument : uint8_t { Unknown = 0, ZaaggenZ = 1, Xenoresonator = 2 };
+enum class CompanionInstrument : uint8_t { Unknown = 0, ZaaggenZ = 1, Xenoresonator = 2, Grimoire = 3 };
 enum class CompanionSource : uint8_t { Unknown = 0, NativeEngine = 1, EmulatedFirmware = 2, PhysicalDevice = 3 };
 enum CompanionCapability : uint16_t {
     CompanionNotes = 1u << 0, CompanionParameters = 1u << 1,

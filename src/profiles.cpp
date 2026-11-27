@@ -62,6 +62,16 @@ const Profile kProfiles[] = {
         false, false, false, false,
         "Native endpoint required. No verified physical FM-1 MIDI mapping.",
         {{0x0f, 0, 0, 0, 0, 0, 0, 0}}
+    },
+    {
+        "grimoire-native", "Grimoire", "Orbit Gate / three materials", "ca1b83a5+CY1",
+        1, {{1, 0, 0, 0, 0, 0, 0, 0}},
+        {{"Orbit Gate", "", "", "", "", "", "", ""}},
+        {{{"Pitch X", 16, 48}, {"Material Y", 17, 70}, {"", 0, 0}, {"", 0, 0},
+          {"", 0, 0}, {"", 0, 0}, {"", 0, 0}, {"", 0, 0}}},
+        false, false, false, false,
+        "Native Orbit Gate only. No verified device endpoint or physical MIDI.",
+        {{0x03, 0, 0, 0, 0, 0, 0, 0}}
     }
 };
 } // namespace

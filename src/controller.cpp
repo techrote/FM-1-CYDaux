@@ -274,6 +274,11 @@ bool Controller::emitNote(uint8_t channel,uint8_t note,uint8_t velocity) {
 bool Controller::sequenceOutput(void* context,uint8_t status,uint8_t note,uint8_t velocity) {
     auto& controller=*static_cast<Controller*>(context);
     if (!controller.active()) return false;
+    if ((status&0xf0)==0x90 && velocity && controller.companionProfile() &&
+        controller.companionProfile()->instrument==CompanionInstrument::Grimoire) {
+        if (note<36 || note>59 || controller.count_>kQueueSize-2) return false;
+        controller.setParameter(0,0,((int(note)-36)*127+22)/23);
+    }
     return controller.emitNote(static_cast<uint8_t>((status&15)+1),note,
                                (status&0xf0)==0x90?velocity:0);
 }
@@ -372,6 +377,10 @@ void Controller::dispatch(UiAction a) {
                 if (a.b>0) {
                     model_.note=static_cast<uint8_t>(std::max(int(model_.noteMinimum),std::min(int(model_.noteMaximum),int(a.a))));
                     model_.velocity=static_cast<uint8_t>(std::min(127,int(a.b)));
+                    if (companionProfile() && companionProfile()->instrument==CompanionInstrument::Grimoire) {
+                        if (count_>kQueueSize-2) break;
+                        setParameter(0,0,((int(model_.note)-36)*127+22)/23);
+                    }
                 }
                 heldChannel_=channels_[model_.trackIndex]; heldNote_=model_.note;
                 heldSent_=emitNote(heldChannel_,heldNote_,model_.velocity);

@@ -1,0 +1,9 @@
+# Orbit Gate — third common companion consumer (Draft/HOLD)
+
+Pinned original source: VIBEWARE #10 at ca1b83a5f6c8f1e87dea671f93f7e2a6d3bc432f; native CI 46066169696 and 46066162733 passed upstream. This is a local native-core adapter to existing experimental CY1 v1 packet layout, not a new wire protocol or a claim of FM-1 device support. The device-side Grimoire endpoint is absent. Standalone upstream engine remains independent. Existing ZaaggenZ/Xenoresonator and four legacy profiles retain their mappings.
+
+- X: 0–127 gesture pitch, floor(x*23/127), 24 chromatic pitches C2–B3 (MIDI 36–59). Y: material coordinate (phase perturbation/filter). Amber, Iron and Abyss presets reset and release. Captured touch uses XY first then gate; drag retains gate. CY1 Note acts as gate ownership token (nonzero velocity opens gate; velocity does not change loudness). Explicit note and sequencer events map MIDI 36–59 to the first X value in the pitch bin before gate. No device MIDI mapping verified.
+- Native readback reports actual X/Y, preset, gate and two sampled interval peaks: envelope and energy (64-frame sampling), plus actual PCM peak. The shared XY field and state view use those native peaks, not spectrum, simulated phase or physical telemetry. Native audio at 24000 Hz; host only. No extra ESP32 DSP or duplicated UI runtime.
+- No enhanced device claim until PLATFORM proves the endpoint; no physical BLE/Wi-Fi/USB claim. Legacy bridge remains supported. Owner evaluator redistribution is subject to original source rights, not covered by the companion MIT grant.
+
+Acceptance: actual native C++ shared controller, HTTP PCM deterministic XY/preset differences, release and panic, real Chromium execution, extracted Linux/Windows packages, ESP32 build, independent QA and separate target transport gates. All new CI results pending until executed.
