@@ -1,13 +1,283 @@
 # FM-1 CYDaux
 
-A touchscreen companion for the M-VAVE FM-1, targeting the original
-ESP32-2432S028R Cheap Yellow Display (320 × 240, resistive touch).
+**A common touchscreen performance companion for the M-VAVE FM-1 and VIBEWARE,
+running on the original ESP32-2432S028R Cheap Yellow Display.**
 
-The initial implementation combines firmware-specific performance controls,
-direct BLE-MIDI where supported, a Wi-Fi to USB-MIDI bridge, and a simulator
-for use before the instrument arrives.
+Choose an instrument profile, play the CYD, and keep the FM-1 making the sound.
+The project includes CYD firmware, an authenticated Windows/Linux USB-MIDI
+bridge, a shared C++ controller and renderer, and a **playable browser-fronted
+evaluator with the actual ZaaggenZ and Xenoresonator native sound engines**.
+One companion firmware includes the supported legacy and extended profiles;
+identity and capability checks gate the richer controls.
 
-Initial firmware targets: Melodee, SLOOP, Skiff and X0X.
+**Status:** common-platform candidate in [Draft/HOLD PR #2](https://github.com/techrote/FM-1-CYDaux/pull/2),
+preserving the implementation from PR #1. Native execution, actual browser
+audio scheduling, Windows extraction and ESP32 compilation have separate
+qualification gates. **Physical CYD/FM-1 acceptance remains pending.**
+Use the exact source SHA and results of a successful run; an older successful
+artifact does not qualify a newer commit. Builds publish downloadable packages in
+[Actions → Build and qualify](https://github.com/techrote/FM-1-CYDaux/actions/workflows/build.yml).
 
-Development and hardware qualification are in progress. No physical FM-1 or CYD
-validation has been performed in this workspace.
+| Actual ZaaggenZ controls | Xenoresonator performance surface |
+| --- | --- |
+| ![Actual shared renderer: ZaaggenZ Play](docs/images/companion-zaaggenz-play.png) | ![Actual shared renderer: Xenoresonator XY](docs/images/companion-xenoresonator-xy.png) |
+
+These are actual 320×240 frames from the shared renderer, not hardware photos.
+
+**Start here:** [playable evaluator and owner guide](docs/companion-owner-guide.md),
+[platform and integration contract](docs/companion-platform.md),
+[virtual execution and evidence](docs/virtual-evaluator.md),
+[complete handbook](docs/README.md).
+
+## The common companion
+
+The shared interface adds single-finger gated XY, fullscreen performance,
+typed parameter cards, preset recall, a local 16-step sequencer, three palettes
+and state plots derived from actual instrument output. A touch selects both
+XY values before attacking the note. Releasing, changing context or panicking
+releases it. Source labels distinguish native-engine readback, device reports,
+local intent and silent mock state.
+
+| Integration | Working implementation | Qualification boundary |
+| --- | --- | --- |
+| **ZaaggenZ** | Eight meaningful parameters, six procedural presets, notes, XY and actual channel/PCM peaks | Source-pinned native engine; its source-image bank is excluded. No claim that unmodified FM-1 firmware implements CY1. |
+| **Xenoresonator** | Actual VIBEWARE resonator core, four material presets, excitation/damping/coupling controls and six modal peaks | Source-pinned native engine; coordinated [FM-1 USB endpoint PR #15](https://github.com/techrote/FM-1-VIBEWARE/pull/15) also builds and runs inside fm1-emu. Physical endpoint acceptance remains pending. |
+| **Melodee, SLOOP, Skiff, X0X** | Original MIDI maps, BLE/bridge behavior, calibration, sessions and safeguards | Existing source audits and software tests retained; physical acceptance remains pending. |
+
+The compact versioned CY1 SysEx endpoint discovers a known instrument identity,
+capabilities and current state. Profiles and layouts are currently compiled into
+the common firmware: this is not arbitrary downloaded-interface execution.
+The same installed image can switch between its supported instruments. Adding a
+new identity still requires a profile/build update. Unknown or incompatible
+endpoints leave extended controls disabled.
+
+## The firmware shortlist
+
+| Profile | Why it is included | Connection | Implemented scope |
+| --- | --- | --- | --- |
+| **[Melodee](https://github.com/keremimo/melodee)** | First choice for a direct wireless companion | **BLE MIDI**, or Wi-Fi/USB bridge | Four tracks, eight performance controls, level/pan, notes, XY |
+| **[SLOOP](https://github.com/isod89/sloop-fm1)** | First choice for integrated groovebox transport and live feedback | Wi-Fi/USB bridge | Three synth tracks + drums, controls, program changes, negotiated LIVE Play/Stop |
+| **[Skiff](https://github.com/illuminus5/skiff)** | Six-track alternative with useful performance MIDI | Wi-Fi/USB bridge | Six tracks, controls, mix, program changes and notes |
+| **[X0X](https://github.com/charlesvestal/fm1-x0x)** | A distinct acid-oriented control surface | Wi-Fi/USB bridge | The two 303 parts, native CC16–23, level, notes, Start/Stop |
+
+The recommendation is to try **Melodee first for BLE**, then **SLOOP for the
+richer bridge integration**. Skiff and X0X provide two different musical
+directions without pretending their protocols are identical. Each profile is
+audited against a pinned upstream source revision; see
+[firmware mappings, routing and limitations](docs/firmwares.md) and the
+[machine-readable source manifest](docs/upstream-sources.json).
+
+Stock FM-1 firmware and other forks are outside the current profile set. A
+similar device or MIDI port name does not establish compatibility with these
+control maps.
+
+The CYD profile selector chooses a control map. It does not install or change
+the FM-1 firmware. Install a chosen firmware using its own upstream instructions
+when the FM-1 arrives, and match its MIDI routing to the selected profile.
+
+## How the connection works
+
+```mermaid
+flowchart TD
+    UI["CYD touchscreen"] --> Core["Shared controller and profiles"]
+    Core -->|"BLE MIDI: Melodee"| FM["FM-1 audio and sequencer"]
+    Core -->|"Wi-Fi TCP"| Bridge["Windows / Linux bridge"]
+    Bridge -->|"USB MIDI"| FM
+    FM -->|"Supported MIDI feedback"| Bridge
+    Bridge -->|"Validated state"| Core
+```
+
+The classic ESP32-2432S028R's USB connection is serial, not a native USB host
+for the FM-1. The bridge lets an ordinary computer supply the USB connection.
+The Wi-Fi link is between the CYD and that computer; it does not depend on an
+FM-1 Wi-Fi service. Direct BLE is implemented for Melodee performance messages.
+Melodee's editor SysEx is excluded from its BLE path.
+
+## Try it before the FM-1 arrives
+
+**Windows prebuilt:** open a successful Actions run for the mission branch,
+download `cydaux-evaluator-windows-<source SHA>`, extract the entire ZIP, and
+double-click `CYDaux-Evaluator.exe` or `Open-Simulator.cmd`. This package includes
+its runtime; **no separate Python installation or compiler is required**.
+The browser opens the local evaluator at `http://127.0.0.1:8781/`.
+
+Select **Xenoresonator** or **ZaaggenZ**, wait for **Native engine**, and click
+**Enable sound**. Tap NOTE, play the gated XY pad, recall a BANK preset or start
+the SEQ loop. Xenoresonator is percussive: tap repeatedly or use the sequencer
+to compare damping and material changes. STATE shows actual engine-derived
+peaks. The audio/video artifact contains reproducible recordings and shared-UI
+demonstrations made by these implementations.
+
+**From source**, with Python 3.10+, CMake 3.20+ and a C/C++17 compiler:
+
+```console
+git clone --branch mission/vibeware-companion-platform-001 https://github.com/techrote/FM-1-CYDaux.git
+cd FM-1-CYDaux
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 2
+python simulator/run.py
+```
+
+The command checks out the implementation branch while its PR is under review.
+The launcher builds the native executable if necessary.
+On Windows, `py` may be used instead of `python`.
+
+The touchscreen frame is produced by the same C++ renderer as the CYD; browser
+pointer events drive that controller and the actual native engine. The top
+firmware name cycles profiles and Link opens connection controls. Legacy
+profiles remain available as silent mock-device demonstrations. The evaluator
+does not open a real BLE radio or MIDI port. Actual FM-1 CPU emulation is a
+separate downstream qualification route, documented in the virtual guide.
+
+Read [the simulator guide](simulator/README.md) for scripting, screenshots,
+prebuilt packages, and the distinction between sent and returned values.
+
+### Exercise the Wi-Fi bridge without an instrument
+
+```console
+python -m bridge --demo --profile sloop --bind 0.0.0.0
+```
+
+This prints a session token. A flashed CYD can connect using the computer's
+LAN IP, port `45821`, and that token. The mock answers SLOOP INFO/LIVE requests
+and stays visibly labelled **MOCK**. It does not synthesize sound or pretend a
+physical FM-1 was tested. Without `--bind`, the bridge listens on localhost.
+
+## Install on your ESP32-2432S028R
+
+Download `cydaux-esp32-2432s028r-…` from a successful Actions run. Extract the
+whole package, open a terminal there, then run:
+
+```console
+python -m pip install -r requirements-flash.txt
+python flash.py --check
+python flash.py --port COM5
+```
+
+Back up any existing CYD application/configuration you need to recover before installing; the flasher replaces the application and partition table and is not a backup tool.
+Replace `COM5` with the **CYD's** actual serial port. The package verifies its
+images and targets the original ESP32. This writes the CYD application; it
+does not flash the FM-1. See [the flash guide](docs/flash-package.md) for Linux,
+bootloader entry and slower baud rates.
+
+On first boot, press and hold each calibration cross, releasing between them.
+Three points define the transform; a fourth corner must pass before saving.
+The CYD starts in DEMO, so it works before any instrument connection. Hold
+BOOT for about two seconds while the app is running to calibrate again.
+
+### Melodee over Bluetooth
+
+Select Melodee on the CYD. Enable Melodee's radio and **VISIBLE** mode on the
+FM-1, then choose **LINK → BLE → CONNECT**. The CYD looks for one device named
+`Melodee XXXX` (four hexadecimal digits) advertising the MIDI service, then
+confirms a MIDI notification subscription. If there are
+several matching devices, enter the intended BLE address through Setup.
+
+The default profile uses MIDI channels 1–4. Match the FM-1's routing; MIDI
+LEARN assignments can override standard CC meanings. The Link page can
+adjust the selected track's channel. Channel overrides last until a profile
+change or reboot. Use the FM-1's own PLAY button for Melodee transport.
+
+### SLOOP, Skiff or X0X over Wi-Fi and USB
+
+Connect the FM-1 to a Windows/Linux computer by USB, then:
+
+```console
+python -m pip install -r bridge/requirements.txt
+python -m bridge --list
+python -m bridge --output "EXACT MIDI OUTPUT NAME" --input "EXACT MIDI INPUT NAME" --bind 0.0.0.0
+```
+
+Copy the exact port names reported by `--list`; the bridge never chooses the
+first device. On the CYD, open **LINK → SETUP**, join the temporary network
+using the credentials shown on screen, and visit `http://192.168.4.1/`.
+Enter your 2.4 GHz home Wi-Fi, computer's LAN address, port and token. Save,
+choose Wi-Fi, and Connect. Setup closes when you leave it, and the app does
+not automatically connect on boot.
+
+SLOOP transport becomes available only after a valid SLOOP INFO reply and an
+initial LIVE reply. The generic shared `FL` SysEx header is not accepted as
+proof of SLOOP identity. Other profiles remain performance controllers with
+their documented feedback limits. See [the bridge guide](docs/bridge.md).
+
+## What the screen means
+
+| Label | Meaning |
+| --- | --- |
+| **DEMO** | Local demonstration or explicitly simulated device data |
+| **UNKNOWN** | No trustworthy value has been observed for this connection |
+| **QUEUED** | Accepted by the controller, still awaiting transport delivery |
+| **SENT** | Delivered to the selected transport; instrument acceptance is unconfirmed |
+| **DEVICE** | Returned by the connected instrument's MIDI input |
+| **NATIVE** | Returned by the actual source-pinned native engine |
+
+There is no fake initial patch readback. Reconnect/profile changes invalidate
+old values; XY hides its cursor until both axes have values. Unsupported
+controls are disabled, including SLOOP drum resonance/attack/release.
+Mix level uses CC7 separately from the performance bank.
+
+Panic drops queued performance messages and releases the channels used by
+the controller. Disconnect also attempts note release while the link is
+still available. A physically lost connection cannot carry a note-off, so
+physical disconnect behavior is part of the pending hardware checks.
+
+## Build and verify
+
+The native core has no Arduino dependencies. Build with CMake 3.20+:
+
+```console
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+python -m unittest discover -s tests/bridge -v
+python -m unittest discover -s simulator -p "test_*.py" -v
+node simulator/test_frontend.cjs
+node simulator/test_audio_player.cjs
+python -m unittest discover -s tests/package -v
+```
+
+Set `FM1_CYD_SIMULATOR` to `build/fm1-simulator` (Windows:
+`build/fm1-simulator.exe`) to enable the two additional real-TCP/shared-core
+bridge tests. CI sets this automatically on both platforms. The Node check
+uses the real HTTP/native engine with a DOM shim. A separate real-Chrome gate
+exercises pointer controls, PCM delivery and Web Audio scheduling. The Windows
+gate launches the freshly extracted standalone package from a path containing
+spaces and Unicode, with Python/compiler directories removed from its PATH.
+See [reproduction and evidence classes](docs/virtual-evaluator.md).
+
+For the original CYD, use Python 3.11 and pinned PlatformIO:
+
+```console
+python -m pip install platformio==6.1.18
+pio run -e cyd -j 2
+pio run -e cyd -t upload --upload-port COM5
+```
+
+Pins are in [firmware/board_config.hpp](firmware/board_config.hpp): the TFT
+uses HSPI, touch uses a separate VSPI bus, and the backlight is GPIO21.
+The display renderer uses six 40-row strips with one reused 25 KiB buffer
+instead of a full frame buffer. Radio and network operations run in a worker task so scans and
+connection timeouts do not block touch handling.
+
+## Scope and next hardware milestone
+
+The local companion sequence editor sends note events; it does not edit a remote
+instrument's internal sequencer. The desktop evaluator streams actual generated
+PCM to its browser. The CYD itself does not synthesize or stream audio. Project
+or sample transfer, arbitrary remote layout download, a full on-device browser
+and FM-1 firmware updating remain outside this candidate. X0X's drum/break/mix
+roles and Skiff's contextual remote button protocol remain outside their profiles.
+
+Reusable templates for Chronomorph, Ecophon, Grimoire and MHAC are integration
+guidance, not completed sound-engine integrations. See the
+[worker contract](AGENTS.md) and [substantive follow-up backlog](docs/companion-backlog.md).
+
+[Hardware validation](docs/hardware-validation.md) lists the measurements and
+observations to record when the FM-1 arrives: screen and touch, Bluetooth
+pairing/subscription, audible MIDI behavior, state readback, disconnect note
+release, and runtime heap/stack headroom. Compile success, mock behavior and
+source review are kept separate from those physical results.
+
+See [architecture](docs/architecture.md), [protocol contract](docs/CONTRACT.md),
+[upstream audit](docs/firmwares.md), [dependency notices](THIRD_PARTY.md), and
+[MIT license](LICENSE).

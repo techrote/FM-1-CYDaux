@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/techrote/FM-1-VIBEWARE",
+  "revision": "fa27a317bb116f2afb62a710876f96314756f814",
+  "path": "instruments/xenoresonator",
+  "license": "LicenseRef-Owner-Provided-Unspecified",
+  "authority": "Owner requested integration of their existing VIBEWARE instrument. No permissive redistribution grant asserted. Original upstream notices retained.",
+  "files_sha256": {
+    "xeno.c": "d921310b17d2dfd0d51f2c867dbbca22298f69b01655cffd6963cffcea712a25",
+    "xeno.h": "90994199269de57521762ab1b19c4767fd2b876ea94f0959ae406b8bb463287a",
+    "README.md": "558b3bf1f190f09c2c30c10f8a618a99a5b25abc4fb89b7b893cf83d3ed8ed3b",
+    "profile.json": "dd0fcf83eb2d33f32142d02c04d58d4863f9a2d1337cf8e7f6171dd63510366d"
+  },
+  "modifications": "None"
+}

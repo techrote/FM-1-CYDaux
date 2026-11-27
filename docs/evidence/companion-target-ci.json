@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "qualification": "Rebuilt actual pi32v2 Xenoresonator firmware in unmodified pinned fm1-emu; physical hardware not executed",
+  "repository": "techrote/FM-1-VIBEWARE",
+  "pr": 15,
+  "source_commit": "3449ead4dd13d91ba0a57262a48349f38d6c465c",
+  "source_tree": "de738e8d36102818cd99b6cb335fa67245ebefec",
+  "source_pins": {
+    "integration": "3449ead4dd13d91ba0a57262a48349f38d6c465c",
+    "integration_tree": "de738e8d36102818cd99b6cb335fa67245ebefec",
+    "cydaux": "7a8ce4be817ccc85ae22f982df98baa701b8176a",
+    "xeno": "fa27a317bb116f2afb62a710876f96314756f814",
+    "dinghy": "92f17b28f2d05f2f78fd1b160b58475d518902c8",
+    "emulator": "736aded65c8e2e9d652cf595fca248734483a877",
+    "toolchain_archive": "cb896562418a2be93edb9bac26af4bc81a106a32974002a78e6b9fc203c93990"
+  },
+  "workflow": {
+    "run_id": 46048299250,
+    "job_id": 140672965777,
+    "status": "completed",
+    "conclusion": "success",
+    "completed_utc": "2026-11-27T18:17:58Z",
+    "url": "https://github.com/techrote/FM-1-VIBEWARE/actions/runs/46048299250",
+    "gates": [
+      "GCC ASan/UBSan C++/C contract and actual-core PCM",
+      "Clang ASan/UBSan C++/C contract and actual-core PCM",
+      "GCC/Clang 20000 randomized 64-bit arithmetic cases",
+      "Actual pi32v2 compile/link; no unresolved symbols; guarded ELF/XIP mapping",
+      "Instruction-clock and strict timing-model USB/audio firmware execution"
+    ]
+  },
+  "artifact": {
+    "id": 15222349807,
+    "name": "cydaux-usb-target-evidence",
+    "zip_bytes": 37502,
+    "zip_sha256": "e8a6428aac015371257bf416b7c3ffce03a69730a85d713a1e9cc18fd45f3ab3",
+    "api_digest_matches_local_download": true,
+    "verified_manifest_members": 27,
+    "all_files_accounted_for": true,
+    "file_types": [
+      ".bmp",
+      ".json",
+      ".log",
+      ".map",
+      ".txt",
+      ".wav"
+    ],
+    "contains_executables_or_installable_firmware": false,
+    "url": "https://github.com/techrote/FM-1-VIBEWARE/actions/runs/46048299250/artifacts/15222349807"
+  },
+  "target": {
+    "sections_bytes": {
+      ".text": 54580,
+      ".ram_text": 2948,
+      ".data": 36,
+      ".bss": 12024,
+      ".pool": 30720,
+      ".noinit": 76
+    },
+    "linked_ram_sections_bytes": 45804,
+    "linked_ram_with_primary_alignment_bytes": 45832,
+    "main_stack_reserved_bytes": 24320,
+    "supervisor_stack_reserved_bytes": 7936,
+    "emulator_input_bytes": 57852,
+    "elf_sha256": "e8d9201f83525cb96949326e2d685e8a900280b923497104eb3368e18c1a4507",
+    "emulator_input_sha256": "488d614f669714efa5b6b37a8d780a59665381f6b56e23d4a2ffcd940a1d8186",
+    "elf_and_xip_match_independent_local_build": true,
+    "undefined_symbols": 0
+  },
+  "execution": {
+    "instruction": {
+      "status": "PASS",
+      "emulated_ms": 3646,
+      "i2s_frames": 141824,
+      "usb_audio_frames": 134306,
+      "usb_audio_underruns": 0,
+      "max_audio_callback_timer4_ticks": 10809,
+      "max_audio_callback_emulated_us": 450.375,
+      "audio_block_deadline_emulated_us": 5804.988662131519,
+      "usb_rtt_emulated_ms": [
+        2,
+        8
+      ],
+      "emulated_main_stack_used_bytes": 324,
+      "emulated_supervisor_stack_used_bytes": 332,
+      "reply_deferrals": 0,
+      "all_four_wavs_equal_local_build": true,
+      "checks": [
+        "USB discovery",
+        "actual readback",
+        "parameter and preset",
+        "PCM repeat",
+        "coupling contrast",
+        "actual interval peaks",
+        "stale session",
+        "invalid range",
+        "panic tail",
+        "lease expiry",
+        "new session recovery",
+        "modeled callback deadline",
+        "emulated stack reserve"
+      ]
+    },
+    "strict": {
+      "status": "PASS",
+      "emulated_ms": 3643,
+      "i2s_frames": 135424,
+      "usb_audio_frames": 127911,
+      "usb_audio_underruns": 0,
+      "max_audio_callback_timer4_ticks": 15741,
+      "max_audio_callback_emulated_us": 655.875,
+      "audio_block_deadline_emulated_us": 5804.988662131519,
+      "usb_rtt_emulated_ms": [
+        2,
+        7
+      ],
+      "emulated_main_stack_used_bytes": 324,
+      "emulated_supervisor_stack_used_bytes": 332,
+      "reply_deferrals": 0,
+      "all_four_wavs_equal_local_build": true,
+      "checks": [
+        "USB discovery",
+        "actual readback",
+        "parameter and preset",
+        "PCM repeat",
+        "coupling contrast",
+        "actual interval peaks",
+        "stale session",
+        "invalid range",
+        "panic tail",
+        "lease expiry",
+        "new session recovery",
+        "modeled callback deadline",
+        "emulated stack reserve"
+      ]
+    }
+  },
+  "boundaries": [
+    "All callback/USB/stack numbers are emulation measurements, not physical FM-1 measurements.",
+    "Peak telemetry is actual instrument PCM before platform MASTER attenuation and I2S packing.",
+    "The native Windows/browser evaluator is a separate execution route.",
+    "No ELF, raw XIP, installer or emulator executable is included in this evidence archive.",
+    "Main companion transport-reconnect recovery was fixed after the pinned wire codec; the protocol codec is unchanged."
+  ]
+}
