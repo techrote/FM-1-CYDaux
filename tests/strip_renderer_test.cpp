@@ -65,6 +65,48 @@ int main() {
         }
         model.fullscreenXY=false;
     }
+    // The Grimoire ornament is deterministic in both renderer paths and
+    // must neither consume stale meters nor claim oscillator phase.
+    const auto legacyProfile=model.profileIndex;
+    model.profileIndex=profileIndex("grimoire-native");
+    model.page=Page::XY;model.xyEnabled=true;
+    model.xyOriginX=model.xyOriginY=ValueOrigin::Native;
+    model.xyX=64;model.xyY=64;model.meterCount=2;
+    for(unsigned theme=0;theme<3;++theme){
+        model.themeIndex=theme;
+        for(bool fullscreen:{false,true}){
+            model.fullscreenXY=fullscreen;
+            model.telemetryAvailable=true;model.telemetryOrigin=ValueOrigin::Native;
+            model.telemetryMeters={0,0,0,0,0,0};verify();
+            const auto quiet=full.pixels;
+            model.telemetryMeters={127,90,0,0,0,0};verify();
+            assert(quiet!=full.pixels);
+            model.telemetryAvailable=false;verify();
+            const auto stale=full.pixels;
+            // In compact mode the global header can still display other state;
+            // compare the actual orbit pad, not unrelated header pixels.
+            auto sameOrbit=[&]{
+                const int left=fullscreen?0:8, top=fullscreen?36:60;
+                const int right=fullscreen?320:226, bottom=fullscreen?240:196;
+                for(int y=top;y<bottom;++y)
+                    assert(std::equal(stale.begin()+y*320+left,stale.begin()+y*320+right,
+                                      full.pixels.begin()+y*320+left));
+            };
+            model.telemetryMeters={0,0,0,0,0,0};verify();
+            sameOrbit();
+            model.telemetryAvailable=true;model.telemetryOrigin=ValueOrigin::Demo;
+            model.telemetryMeters={127,127,0,0,0,0};verify();
+            sameOrbit();
+            model.telemetryOrigin=ValueOrigin::Native;model.meterCount=1;verify();
+            sameOrbit();
+            model.meterCount=2;
+            for(const auto xy:std::array<std::array<uint8_t,2>,4>{{{0,0},{127,0},{0,127},{127,127}}}){
+                model.xyX=xy[0];model.xyY=xy[1];verify();
+            }
+        }
+    }
+    model.profileIndex=legacyProfile;model.fullscreenXY=false;
+    model.telemetryAvailable=true;model.telemetryOrigin=ValueOrigin::Native;model.meterCount=6;
     model.setupActive=true;std::snprintf(model.setupSsid,sizeof(model.setupSsid),"CYDaux-AbCd");
     std::snprintf(model.setupPassword,sizeof(model.setupPassword),"caseSensitive");verify();
     model.setupActive=false;model.companionEnabled=false;

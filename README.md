@@ -6,7 +6,7 @@ running on the original ESP32-2432S028R Cheap Yellow Display.**
 Choose an instrument profile, play the CYD, and keep the FM-1 making the sound.
 The project includes CYD firmware, an authenticated Windows/Linux USB-MIDI
 bridge, a shared C++ controller and renderer, and a **playable browser-fronted
-evaluator with the actual ZaaggenZ and Xenoresonator native sound engines**.
+evaluator with the actual ZaaggenZ, Xenoresonator and Grimoire native sound engines**.
 One companion firmware includes the supported legacy and extended profiles;
 identity and capability checks gate the richer controls.
 
@@ -42,6 +42,7 @@ local intent and silent mock state.
 | --- | --- | --- |
 | **ZaaggenZ** | Eight meaningful parameters, six procedural presets, notes, XY and actual channel/PCM peaks | Source-pinned native engine; its source-image bank is excluded. No claim that unmodified FM-1 firmware implements CY1. |
 | **Xenoresonator** | Actual VIBEWARE resonator core, four material presets, excitation/damping/coupling controls and six modal peaks | Source-pinned native engine; coordinated [FM-1 USB endpoint PR #15](https://github.com/techrote/FM-1-VIBEWARE/pull/15) also builds and runs inside fm1-emu. Physical endpoint acceptance remains pending. |
+| **Grimoire — Orbit Gate** | Actual portable engine, Amber/Iron/Abyss presets, gated pitch/material XY, envelope/energy and local orbit-model geometry | Native host execution; no verified Grimoire CY1 device endpoint. See [profile details](docs/grimoire-native.md). |
 | **Melodee, SLOOP, Skiff, X0X** | Original MIDI maps, BLE/bridge behavior, calibration, sessions and safeguards | Existing source audits and software tests retained; physical acceptance remains pending. |
 
 The compact versioned CY1 SysEx endpoint discovers a known instrument identity,
@@ -101,7 +102,7 @@ double-click `CYDaux-Evaluator.exe` or `Open-Simulator.cmd`. This package includ
 its runtime; **no separate Python installation or compiler is required**.
 The browser opens the local evaluator at `http://127.0.0.1:8781/`.
 
-Select **Xenoresonator** or **ZaaggenZ**, wait for **Native engine**, and click
+Select **Xenoresonator**, **ZaaggenZ** or **Grimoire**, wait for **Native engine**, and click
 **Enable sound**. Tap NOTE, play the gated XY pad, recall a BANK preset or start
 the SEQ loop. Xenoresonator is percussive: tap repeatedly or use the sequencer
 to compare damping and material changes. STATE shows actual engine-derived

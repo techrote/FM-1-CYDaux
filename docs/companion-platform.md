@@ -4,7 +4,7 @@ This implementation extends PR #1 at
 `6540bac817c78618f2d3a666e70d684b7f6216a9`. The legacy controller is retained;
 the new profile/session layer and musical pages use the same renderer and touch
 capture on ESP32 and desktop. The native evaluator controls actual portable
-ZaaggenZ and Xenoresonator engines and plays their PCM.
+ZaaggenZ, Xenoresonator and Grimoire engines and plays their PCM.
 
 ## Implemented architecture
 
@@ -33,6 +33,8 @@ full-frame renderer are compared byte for byte in `strip_renderer_test`.
 | X0X | Existing USB-MIDI bridge | Two 303 parts, controls and supported transport | Feedback requires the instrument's CC-out configuration |
 | `zaaggenz-native` | CY1 endpoint around actual procedural ZaaggenZ engine | Eight parameters, six native factory presets, notes, XY, five stem peaks and PCM peak | Native host execution; source-image/hybrid modes excluded; not unmodified Fune support |
 | `xenoresonator-native` | CY1 endpoint around actual VIBEWARE Xenoresonator | Excitation, damping, coupling, four materials/presets, notes, six modal-state peaks and PCM peak | Native host execution; separate target integration must carry its own emulator/hardware receipt |
+
+| `grimoire-native` | CY1 endpoint around actual Orbit Gate core | Pitch/material XY, three presets, two envelope/energy peaks, PCM and labelled local orbit model | Native host execution only; no FM-1 CY1 endpoint or physical proof |
 
 Tier 1 is the verified MIDI subset of each legacy profile. Tier 2 is actual
 negotiated identity, parameter/preset mutations and state reconciliation in the
@@ -99,7 +101,7 @@ byte-level interoperability tests.
 | 20 | Actual PCM output peak |
 | 21..22 | State revision, low seven bits first |
 
-Instrument IDs 1 and 2 identify ZaaggenZ and Xenoresonator. Source classes are
+Instrument IDs 1, 2 and 3 identify ZaaggenZ, Xenoresonator and Grimoire respectively. Source classes are
 NativeEngine=1, EmulatedFirmware=2 and PhysicalDevice=3. A source declaration
 does not prove the environment; qualification evidence establishes that.
 Capability bits are notes, parameters, presets, XY, telemetry, transport and
