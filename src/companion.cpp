@@ -330,8 +330,10 @@ void CompanionReleaseTracker::sent(const MidiMessage& message) {
         session_ = packet.session; sequence_ = packet.sequence;
     }
     if (packet.session != session_) return;
-    const bool current = packet.sequence == sequence_ || companionSequenceAfter(packet.sequence, sequence_);
-    if (!current) return;
+    // An equal-sequence mutation is rejected by the endpoint, just like an
+    // older mutation. In particular, a replayed Panic must not erase our
+    // responsibility for the Note that actually consumed that sequence.
+    if (!companionSequenceAfter(packet.sequence, sequence_)) return;
     sequence_ = packet.sequence;
     if (packet.op == CompanionOp::Note && packet.payload[1]) notesTouched_ = true;
     else if (packet.op == CompanionOp::Panic) notesTouched_ = false;

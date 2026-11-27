@@ -1,6 +1,7 @@
 """Behaviour tests without installed MIDI libraries or connected hardware."""
 
 import unittest
+import threading
 
 from bridge.midi_io import (
     EndpointUnavailable, MAX_INPUT_MESSAGES, MockMidi, UsbMidi, validate_midi_bytes,
@@ -116,6 +117,46 @@ class UsbMidiTests(unittest.TestCase):
         self.endpoint.tick(2)
         self.assertFalse(self.endpoint.connected)
         self.assertTrue(self.mido.output.closed)
+
+    def test_retired_callback_cannot_inject_into_reopened_port(self):
+        self.endpoint.tick(0)
+        retired = self.mido.callback
+        retired(FakeMessage([0xB0, 7, 11]))
+        self.mido.outputs = []
+        self.endpoint.tick(2)
+        self.mido.outputs = ["FM-1 OUT"]
+        self.endpoint.tick(4)
+        retired(FakeMessage([0xB0, 7, 22]))
+        self.mido.callback(FakeMessage([0xB0, 7, 33]))
+        self.assertEqual(self.endpoint.receive(), [(0xB0, 7, 33)])
+
+    def test_callback_paused_during_validation_cannot_cross_port_epoch(self):
+        self.endpoint.tick(0)
+        entered = threading.Event()
+        resume = threading.Event()
+
+        class DelayedMessage(FakeMessage):
+            def bytes(self):
+                entered.set()
+                if not resume.wait(2):
+                    raise AssertionError("callback was not released")
+                return super().bytes()
+
+        old_callback = self.mido.callback
+        worker = threading.Thread(target=old_callback, args=(DelayedMessage([0xB0, 7, 44]),))
+        worker.start()
+        try:
+            self.assertTrue(entered.wait(2))
+            self.mido.outputs = []
+            self.endpoint.tick(2)
+            self.mido.outputs = ["FM-1 OUT"]
+            self.endpoint.tick(4)
+            self.mido.callback(FakeMessage([0xB0, 7, 55]))
+        finally:
+            resume.set()
+            worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(self.endpoint.receive(), [(0xB0, 7, 55)])
 
     def test_callback_queue_is_bounded(self):
         self.endpoint.tick(0)

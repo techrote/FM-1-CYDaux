@@ -58,6 +58,26 @@ class CompanionBridgeTests(unittest.TestCase):
         session.release()
         self.assertEqual(endpoint.sent[-1], cy(8, 99, 1))
 
+    def test_duplicate_panic_and_malformed_envelope_do_not_retire_note_duty(self):
+        endpoint = MockMidi(echo=False)
+        session = Session(endpoint, "token", "midi", "zaaggenz-native", authenticated=True)
+        messages = [cy(1, 99, 0, (1,)), cy(7, 99, 1, (60, 100)),
+                    cy(8, 99, 1), cy(5, 99, 4000, (0,)), cy(127, 99, 5000)]
+        for message in messages:
+            self.assertEqual(session.handle({"type": "midi", "data": list(message)}), [])
+        session.release()
+        self.assertEqual(list(endpoint.sent), messages + [cy(8, 99, 2)])
+
+    def test_new_panic_clears_duty_but_duplicate_note_cannot_restore_it(self):
+        endpoint = MockMidi(echo=False)
+        session = Session(endpoint, "token", "midi", "xenoresonator-native", authenticated=True)
+        messages = [cy(1, 99, 0, (2,)), cy(7, 99, 1, (60, 100)),
+                    cy(8, 99, 2), cy(7, 99, 2, (60, 100))]
+        for message in messages:
+            self.assertEqual(session.handle({"type": "midi", "data": list(message)}), [])
+        session.release()
+        self.assertEqual(list(endpoint.sent), messages)
+
     def test_replayed_discovery_cannot_erase_release_epoch(self):
         endpoint = MockMidi(echo=False)
         session = Session(endpoint, "token", "midi", "zaaggenz-native", authenticated=True)
