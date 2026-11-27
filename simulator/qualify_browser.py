@@ -54,6 +54,10 @@ def main():
             for instrument in ("xenoresonator-native","zaaggenz-native"):
                 page.select_option("#profile",instrument)
                 page.wait_for_function("state && state.companionReady && state.transport===3")
+                # Page state intentionally survives a companion profile change.
+                # The previous instrument finishes on Sequence, not Play.
+                page.click('[data-page="play"]')
+                page.wait_for_function("state.page===0 && state.controls[0].enabled")
                 page.click("#audioStart")
                 page.wait_for_function("audioPlayer.running && audioPlayer.blocks>0")
                 page.locator("#screen").focus()
@@ -69,7 +73,9 @@ def main():
                 # Shared renderer remains the touch surface; test final drag.
                 box=page.locator("#screen").bounding_box()
                 def point(x,y):return(box["x"]+x*box["width"]/320,box["y"]+y*box["height"]/240)
-                page.mouse.move(*point(15,80));page.mouse.down();page.mouse.move(*point(149,80),steps=8);page.mouse.up()
+                page.mouse.move(*point(15,80));page.mouse.down()
+                page.wait_for_function("state.controls[0].value===0")
+                page.mouse.move(*point(149,80),steps=8);page.mouse.up()
                 page.wait_for_function("state.controls[0].value===127")
                 page.click('[data-page="sequence"]')
                 page.wait_for_function("state.page===4")

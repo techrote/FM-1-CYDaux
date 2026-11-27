@@ -95,17 +95,17 @@ function releasePointer(event,cancel){if(activePointer!==event.pointerId)return;
 screen.addEventListener("pointerup",event=>releasePointer(event,false));
 screen.addEventListener("pointercancel",event=>releasePointer(event,true));
 screen.addEventListener("lostpointercapture",()=>{if(activePointer!==null){activePointer=null;pendingMove=null;touch("cancel");}});
-window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);}});
-window.addEventListener("pagehide",()=>{audioPlayer.running=false;audioPlayer.flush();fetch("/api/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"audio-clock",value:"off"}),keepalive:true}).catch(()=>{});});
+window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running||audioPlayer.starting)audioPlayer.stop().catch(showError);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running||audioPlayer.starting)audioPlayer.stop().catch(showError);}});
+window.addEventListener("pagehide",()=>{audioPlayer.invalidate();fetch("/api/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"audio-clock",value:"off"}),keepalive:true}).catch(()=>{});});
 document.querySelectorAll("[data-page]").forEach(button=>button.addEventListener("click",()=>control("page",button.dataset.page)));
 profile.addEventListener("change",async()=>{
  await control("profile",profile.value);
  if(state&&state.nativeSupported){await control("transport","native");await control("connect");}
- else if(audioPlayer.running)await audioPlayer.stop();
+ else if(audioPlayer.running||audioPlayer.starting)await audioPlayer.stop();
 });
 transport.addEventListener("change",async()=>{
- if(transport.value!=="native"&&audioPlayer.running)await audioPlayer.stop();
+ if(transport.value!=="native"&&(audioPlayer.running||audioPlayer.starting))await audioPlayer.stop();
  await control("transport",transport.value);
 });
 document.getElementById("audioStart").addEventListener("click",async()=>{

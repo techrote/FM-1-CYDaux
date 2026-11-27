@@ -8,6 +8,9 @@ class NativeAudioPlayer {
     this.context = null;
     this.gain = null;
     this.running = false;
+    this.starting = false;
+    this.run = 0;
+    this.pumpTask = null;
     this.epoch = 0;
     this.nextTime = 0;
     this.nodes = new Set();
@@ -19,25 +22,42 @@ class NativeAudioPlayer {
     this.volume = 0.6;
   }
   async start() {
-    if (this.running) return;
-    const Audio = window.AudioContext || window.webkitAudioContext;
-    if (!Audio) throw new Error("This browser does not provide Web Audio");
-    if (!this.context) {
-      this.context = new Audio({latencyHint: "interactive"});
-      this.gain = this.context.createGain();
-      this.gain.gain.value = this.volume;
-      this.gain.connect(this.context.destination);
+    if (this.running || this.starting) return;
+    const run = ++this.run;
+    this.starting = true;
+    try {
+      // An old PCM request can still be rendering on the server. Drain its
+      // pump before opening a new clock lease, and never resurrect that pump.
+      if (this.pumpTask) await this.pumpTask;
+      if (run !== this.run) return;
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) throw new Error("This browser does not provide Web Audio");
+      if (!this.context) {
+        this.context = new Audio({latencyHint: "interactive"});
+        this.gain = this.context.createGain();
+        this.gain.gain.value = this.volume;
+        this.gain.connect(this.context.destination);
+      }
+      await this.context.resume();
+      if (run !== this.run) return;
+      await this.control("audio-clock", "on");
+      if (run !== this.run) return;
+      this.running = true;
+      this.flush();
+      this.report({running: true, blocks: this.blocks, underruns: this.underruns, ahead: 0});
+      this.pumpTask = this.pump(run);
+    } finally {
+      if (run === this.run) this.starting = false;
     }
-    await this.context.resume();
-    await this.control("audio-clock", "on");
-    this.running = true;
-    this.flush();
-    this.report({running: true, blocks: this.blocks, underruns: this.underruns, ahead: 0});
-    this.pump();
   }
-  async stop() {
+  invalidate() {
+    ++this.run;
+    this.starting = false;
     this.running = false;
     this.flush();
+  }
+  async stop() {
+    this.invalidate();
     this.report({running: false, blocks: this.blocks, underruns: this.underruns, ahead: 0});
     await this.control("audio-clock", "off");
   }
@@ -76,8 +96,8 @@ class NativeAudioPlayer {
     for (let i = 0; i < frames; ++i) samples[i] = view.getInt16(24 + i * 2, true) / 32768;
     return {rate, generation, serial, frames, samples};
   }
-  async pump() {
-    while (this.running) {
+  async pump(run) {
+    while (this.running && run === this.run) {
       const epoch = this.epoch;
       try {
         if (this.context.state !== "running") {
@@ -94,7 +114,8 @@ class NativeAudioPlayer {
         });
         if (!response.ok) throw new Error("Native audio transport failed");
         const block = NativeAudioPlayer.decode(await response.arrayBuffer());
-        if (!this.running || epoch !== this.epoch) continue;
+        if (!this.running || run !== this.run) return;
+        if (epoch !== this.epoch) continue;
         if (this.expectedGeneration !== null && block.generation !== this.expectedGeneration) {
           // A late response from a superseded preset/session is never audible.
           await new Promise(resolve => setTimeout(resolve, 8));
@@ -128,6 +149,7 @@ class NativeAudioPlayer {
         this.report({running: true, blocks: this.blocks, underruns: this.underruns,
                      ahead: this.nextTime - this.context.currentTime, rate: block.rate});
       } catch (error) {
+        if (run !== this.run) return;
         this.running = false;
         this.flush();
         this.report({running: false, error, blocks: this.blocks, underruns: this.underruns, ahead: 0});
