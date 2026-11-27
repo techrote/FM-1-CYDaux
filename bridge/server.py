@@ -36,6 +36,12 @@ class Session:
     companion_sequence: int = 0
     companion_notes: bool = False
 
+    @property
+    def companion_epoch(self) -> bool:
+        # Profile metadata may be changed after discovery; it must not
+        # relinquish the release responsibility of a negotiated session.
+        return bool(self.companion_session or self.profile in COMPANION_PROFILES)
+
     def _observe_companion(self, message: tuple[int, ...]) -> None:
         """Track only the bounded CY1 envelope for loss-of-link emergency panic.
 
@@ -257,7 +263,14 @@ class BridgeServer:
             frames = client.decoder.feed(chunk)
             for frame in frames:
                 client.last_frame = now
+                was_ready = bool(self.endpoint.connected)
                 responses = client.session.handle(frame)
+                if was_ready and not self.endpoint.connected and client.session.companion_epoch:
+                    # A send can retire USB synchronously, halfway through
+                    # a TCP batch. Do not forward the remaining old commands,
+                    # or leave this authenticated socket alive for a new port.
+                    self._drop("companion USB endpoint lost during command; reconnect required")
+                    break
                 for response in responses:
                     self._queue(response)
                 if self.client is None:
@@ -298,10 +311,17 @@ class BridgeServer:
         current_state = (bool(self.endpoint.connected), self.endpoint.detail)
         client = self.client
         if current_state != self._backend_state:
+            was_ready = self._backend_state[0]
             self._backend_state = current_state
             LOG.info("MIDI endpoint: %s", current_state[1])
             if client and client.session.authenticated:
-                self._queue({"type": "status", "ready": current_state[0], "reason": current_state[1][:300]})
+                if was_ready and not current_state[0] and client.session.companion_epoch:
+                    # One enhanced TCP session belongs to one USB lifetime.
+                    # Release is best effort on a dead port; no old panic or
+                    # mutation may be retried on the replacement endpoint.
+                    self._drop("companion USB endpoint lost; reconnect required")
+                else:
+                    self._queue({"type": "status", "ready": current_state[0], "reason": current_state[1][:300]})
         for message in self.endpoint.receive():
             if self.client and self.client.session.authenticated and not self.client.session.closing:
                 self._queue({"type": "midi", "data": list(message)})

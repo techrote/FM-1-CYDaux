@@ -83,7 +83,7 @@ void TransportService::run() {
     WiFiClient socket;
     NimBLEClient* ble=nullptr;
     NimBLERemoteCharacteristic* characteristic=nullptr;
-    bool bleStarted=false, ready=false, mock=false, helloSeen=false;
+    bool bleStarted=false, ready=false, mock=false, helloSeen=false, extendedWifi=false;
     TransportKind mode=TransportKind::Demo;
     uint32_t generation=0, lastRx=0, lastPing=0, ping=0;
     uint16_t noteChannels=0;
@@ -132,7 +132,7 @@ void TransportService::run() {
         bleGeneration_.store(0);
         // Independent release fallback covers queued/cancelled controller events.
         if (ready) releaseNotes();
-        ready=false; helloSeen=false; noteChannels=0; companionRelease.reset();
+        ready=false; helloSeen=false; extendedWifi=false; noteChannels=0; companionRelease.reset();
         if (ble && ble->isConnected()) ble->disconnect();
         characteristic=nullptr;
         socket.stop(); lineSize=0;
@@ -242,6 +242,7 @@ void TransportService::run() {
                     status(LinkEventKind::Connected,"BLE ready: values await instrument feedback");
                 } else {
                     mode=TransportKind::Wifi;
+                    extendedWifi=companionProfileFor(command.config.profile)!=nullptr;
                     if (!command.config.ssid[0] || !command.config.host[0] || !command.config.token[0]) {
                         fail("Use Setup to enter Wi-Fi and bridge details"); continue;
                     }
@@ -317,6 +318,14 @@ void TransportService::run() {
                 if (!helloSeen || !json["ready"].is<bool>()) { fail("Invalid bridge status"); break; }
                 const bool nextReady=json["ready"].as<bool>();
                 if (nextReady!=ready) {
+                    // Older bridges may retain the socket across a USB loss.
+                    // Enhanced profiles must retire the entire session, not
+                    // just resume with a new device and old release tracker.
+                    if (extendedWifi && ready && !nextReady) {
+                        ready=false;
+                        fail("Companion USB endpoint lost; press Connect");
+                        break;
+                    }
                     acceptMidi_.store(false); ++midiEpoch_;
                     ready=nextReady; acceptMidi_.store(ready);
                     if (!ready) xQueueReset(received_);

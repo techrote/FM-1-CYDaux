@@ -4,7 +4,7 @@ import socket
 import time
 import unittest
 
-from bridge.midi_io import MockMidi
+from bridge.midi_io import EndpointUnavailable, MockMidi
 from bridge.protocol import LineDecoder, encode_frame
 from bridge.server import BridgeServer
 
@@ -180,6 +180,129 @@ class SocketBridgeTests(unittest.TestCase):
         for _ in range(3):
             self.server.step(0.001)
         self.assertEqual(list(self.endpoint.sent), [(0xB0, 7, 93)])
+
+
+def cy(op, session, sequence, payload=()):
+    return (0xF0, 0x7D, 0x43, 0x59, 1, 0, op,
+            *(session >> (7 * i) & 127 for i in range(4)),
+            sequence & 127, sequence >> 7, len(payload), *payload, 0xF7)
+
+
+class FailingEndpoint(MockMidi):
+    def __init__(self):
+        super().__init__(echo=False)
+        self.fail_next = False
+        self.attempted = []
+
+    def send(self, data):
+        self.attempted.append(tuple(data))
+        if self.fail_next:
+            self.fail_next = False
+            self.connected = False
+            self.detail = "simulated USB send failure"
+            raise EndpointUnavailable(self.detail)
+        super().send(data)
+
+
+class CompanionEpochSocketTests(unittest.TestCase):
+    """Real TCP framing/connection lifecycle; simulated USB endpoint loss."""
+
+    def setUp(self):
+        self.clock = Clock()
+        self.endpoint = FailingEndpoint()
+        self.server = BridgeServer(self.endpoint, "test-token", port=0,
+                                   clock=self.clock, mode="midi",
+                                   profile="xenoresonator-native")
+        self.peer = Peer(self.server)
+
+    def tearDown(self):
+        self.peer.close()
+        self.server.close()
+
+    def hello(self, ready=True):
+        self.peer.send({"type": "hello", "protocol": 1, "token": "test-token"})
+        frame = self.peer.next()
+        self.assertEqual(frame["type"], "hello")
+        self.assertEqual(frame["mode"], "midi")
+        self.assertIs(frame["ready"], ready)
+
+    def send_cy(self, message):
+        self.peer.send({"type": "midi", "data": list(message)})
+
+    def barrier(self):
+        self.peer.send({"type": "ping", "id": 42})
+        self.assertEqual(self.peer.next(), {"type": "pong", "id": 42})
+
+    def play(self, session):
+        self.send_cy(cy(1, session, 0, (2,)))
+        self.send_cy(cy(7, session, 1, (60, 100)))
+        self.barrier()
+
+    def reconnect(self):
+        self.peer.close()
+        self.endpoint.connected = True
+        self.endpoint.detail = "replacement USB endpoint ready"
+        self.server.step(0)
+        self.peer = Peer(self.server)
+        self.hello()
+
+    def test_usb_loss_retires_tcp_and_new_session_owns_release(self):
+        self.hello()
+        self.play(99)
+        # A profile metadata change cannot relinquish the CY1 epoch.
+        self.peer.send({"type": "profile", "id": "sloop"})
+        self.barrier()
+        self.endpoint.connected = False
+        self.endpoint.detail = "USB device removed"
+        self.assertIsNone(self.peer.next())
+        self.assertTrue(self.peer.closed)
+        self.assertIsNone(self.server.client)
+        self.assertEqual(list(self.endpoint.sent), [cy(1, 99, 0, (2,)),
+                                                     cy(7, 99, 1, (60, 100))])
+        self.reconnect()
+        self.assertEqual(len(self.endpoint.sent), 2)
+        self.play(100)
+        self.peer.close()
+        for _ in range(3):
+            self.server.step(0.001)
+        self.assertEqual(list(self.endpoint.sent)[2:], [cy(1, 100, 0, (2,)),
+                                                        cy(7, 100, 1, (60, 100)),
+                                                        cy(8, 100, 2)])
+
+    def test_send_failure_discards_remaining_frames_in_same_tcp_batch(self):
+        self.hello()
+        self.play(99)
+        self.endpoint.fail_next = True
+        failed = cy(5, 99, 2, (0, 127))
+        stale = cy(7, 99, 3, (64, 120))
+        self.peer.socket.sendall(b"".join(encode_frame(frame) for frame in (
+            {"type": "midi", "data": list(failed)},
+            {"type": "midi", "data": list(stale)},
+            {"type": "ping", "id": 9},
+        )))
+        self.assertIsNone(self.peer.next())
+        self.assertTrue(self.peer.closed)
+        self.assertIn(failed, self.endpoint.attempted)
+        self.assertNotIn(stale, self.endpoint.attempted)
+        self.reconnect()
+        self.assertEqual(len(self.endpoint.sent), 2)
+        self.play(101)
+        self.peer.close()
+        for _ in range(3):
+            self.server.step(0.001)
+        self.assertEqual(self.endpoint.sent[-1], cy(8, 101, 2))
+        self.assertNotIn(stale, self.endpoint.attempted)
+
+    def test_initial_wait_is_not_a_lost_epoch(self):
+        self.endpoint.connected = False
+        self.endpoint.detail = "waiting for USB"
+        self.hello(ready=False)
+        self.endpoint.connected = True
+        self.endpoint.detail = "USB ready"
+        self.assertEqual(self.peer.next(), {"type": "status", "ready": True,
+                                           "reason": "USB ready"})
+        self.play(99)
+        self.assertEqual(len(self.endpoint.sent), 2)
 
 
 if __name__ == "__main__":

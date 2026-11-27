@@ -122,6 +122,17 @@ This maintains one wire session per transport epoch; a replayed or competing
 Discover cannot steal the emergency-release responsibility. No note or parameter
 mutation is replayed during recovery.
 
+An authenticated enhanced-profile TCP connection is also retired on USB
+readiness loss, including a send failure within a batch of TCP frames. The
+bridge discards remaining frames and performs best-effort release on the
+retired port only; a replacement USB endpoint requires a new TCP
+authentication and CY1 discovery. Initial waiting for USB is still supported.
+The CYD transport also closes an enhanced connection when an older bridge
+reports ready-to-unavailable status. Legacy profile waiting/status behaviour
+is unchanged. These are software lifecycle guards, not a guarantee of note
+release after physical cable removal; the instrument-side receive lease
+remains necessary.
+
 The 40-message controller queue coalesces only the trailing uninterrupted run of
 parameter mutations. It preserves the admitted packet's sequence, so discarded
 unsent touch samples do not exhaust the sequence window. Notes, reads and preset
