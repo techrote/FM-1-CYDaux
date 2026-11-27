@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/techrote/FM-1-VIBEWARE",
+  "revision": "7fa9a16b55b321a1a8b46e174ed15e927aeaece6",
+  "path": "instruments/chronomorph",
+  "license": "LicenseRef-Owner-Provided-Unspecified",
+  "authority": "Owner-authorized issue-scoped integration; no general redistribution grant asserted.",
+  "files_git_blob_sha1": {
+    "chrono.c": "f02f04f6ec61ab98ec100dcde30a5bfcbc17ba9c",
+    "chrono.h": "1ec13770d7818277e4b82ab0dcc8e545fe926b21",
+    "profile.json": "3c0a8fbdf610cccb3531fe475055e82b3d2fcaaa"
+  },
+  "modifications": "None; companion adapter separate."
+}

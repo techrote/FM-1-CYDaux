@@ -42,6 +42,8 @@ standard library. The 5×7 screen font and UI renderer are original code.
 
 | Grimoire Orbit Gate | `techrote/FM-1-VIBEWARE` at `ca1b83a5f6c8f1e87dea671f93f7e2a6d3bc432f`, `instruments/grimoire` | Original owner-provided portable core; owner-authorized integration only. LicenseRef-Owner-Provided-Unspecified; no general redistribution grant asserted. |
 
+| Chronomorph | `techrote/FM-1-VIBEWARE` at `7fa9a16b55b321a1a8b46e174ed15e927aeaece6`, `instruments/chronomorph` | Original owner-provided portable core, used in separate native adapter test; owner-authorized integration only. LicenseRef-Owner-Provided-Unspecified; no general redistribution grant asserted. |
+
 `third_party/*/UPSTREAM.json` records source locations, revisions, exact file
 hashes and local modifications. These source files and notices travel with the
 owner evaluator so the engine behavior and licensing boundary remain inspectable.

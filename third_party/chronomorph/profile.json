@@ -1,0 +1,93 @@
+{
+  "instrument": "chronomorph",
+  "version": 1,
+  "status": "provisional local semantics; not a wire protocol",
+  "intendedTier": "basic MIDI clock/controls where verified; enhanced pattern editing and clock telemetry where supported",
+  "verifiedTier": "native standalone core and local fixture; native/browser CI 46063499182 PASS; independent frozen FM-1 virtual target CI 46066974168 PASS; no companion route qualified",
+  "sampleRate": 24000,
+  "parameters": [
+    {
+      "id": "bpm",
+      "min": 40,
+      "max": 220,
+      "unit": "BPM",
+      "default": 112
+    },
+    {
+      "id": "warp",
+      "min": -60,
+      "max": 60,
+      "default": 24,
+      "unit": "percent rate deviation"
+    },
+    {
+      "id": "variation",
+      "min": 0,
+      "max": 100,
+      "default": 12,
+      "unit": "percent"
+    },
+    {
+      "id": "preset",
+      "min": 0,
+      "max": 2,
+      "default": 0
+    }
+  ],
+  "pattern": {
+    "lanes": 3,
+    "length": {
+      "min": 1,
+      "max": 16
+    },
+    "mask": "unsigned bit mask < 2^length; bit zero first; local edit applies before next step",
+    "defaults": [
+      {
+        "length": 7,
+        "mask": 73
+      },
+      {
+        "length": 5,
+        "mask": 21
+      },
+      {
+        "length": 11,
+        "mask": 1321
+      }
+    ],
+    "editing": "local reversible cyclic rotation and evenly spaced density fill; resulting length/mask only, no new wire command",
+    "scenes": "Four local volatile scene slots capture BPM/warp/variation and all length/mask pairs. Recall atomically at next local block, preserving session, transport, seed and clocks; no wire command."
+  },
+  "events": [
+    "start",
+    "stop",
+    "reset",
+    "panic (same immediate mute as stop)"
+  ],
+  "telemetry": {
+    "source": "local core only, no device feedback",
+    "fields": [
+      "step",
+      "cycle",
+      "ticks",
+      "hits",
+      "clock",
+      "playing"
+    ],
+    "fixture": "offline final state or bounded local live block-end step/ticks/hits/cycle/clock snapshot; no device feedback",
+    "replay": "Tidal Interlock offline fixture v1: 20 Hz block-end local state and PCM CRC32, two matched arms; companion_replay.py"
+  },
+  "unsupported": [
+    "verified MIDI transport",
+    "bidirectional device feedback",
+    "physical CYD",
+    "device discovery"
+  ],
+  "panelCandidate": {
+    "PLAY": "toggle transport",
+    "HOME": "stop/mute",
+    "SEL": "composition/reset",
+    "K1": "tempo",
+    "K2": "warp; subject to actual target controls"
+  }
+}
