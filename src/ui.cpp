@@ -404,15 +404,60 @@ void drawMix(Canvas& canvas,const UiModel& model) {
   }
   drawText(canvas,10,198,"DRAG LEVELS    TAP A TRACK NAME",theme::muted,1,50);
 }
+// Orbit Gate visual grammar: deterministic local geometry, not oscillator phase.
+// Only the two existing state meters drive its radii; no animation clock,
+// framebuffer, float/trig or additional wire data is required.
+void drawOrbitModel(Canvas& canvas,Rect rect,const UiModel& model) {
+  const bool fresh=model.telemetryAvailable&&model.meterCount>=2&&
+      (model.telemetryOrigin==ValueOrigin::Native||model.telemetryOrigin==ValueOrigin::Device);
+  const int env=fresh?visibleStatePeak(model.telemetryMeters[0]):0;
+  const int energy=fresh?visibleStatePeak(model.telemetryMeters[1]):0;
+  const int material=model.xyEnabled&&model.xyOriginY!=ValueOrigin::Unknown?clampMidi(model.xyY):0;
+  const int cx=rect.x+rect.w/2,cy=rect.y+rect.h/2+3;
+  const int extent=std::min(rect.w,rect.h)/2-24;
+  // Fixed Q7 unit octagon subdivided into 16 vertices, closed explicitly.
+  static constexpr int8_t unit[16][2]={{127,0},{117,49},{90,90},{49,117},
+      {0,127},{-49,117},{-90,90},{-117,49},{-127,0},{-117,-49},
+      {-90,-90},{-49,-117},{0,-127},{49,-117},{90,-90},{117,-49}};
+  const uint16_t color=fresh?originColor(model.telemetryOrigin):theme::line;
+  for(int ring=0;ring<3;++ring){
+    const int base=extent*(ring+1)/4;
+    const int pulse=(ring==0?env:energy)*extent/(127*8);
+    const int rx=base+pulse;
+    const int ry=std::max(3,rx*(96+material/4)/127);
+    for(int i=0;i<16;++i){
+      const int j=(i+1)%16;
+      drawLine(canvas,cx+unit[i][0]*rx/127,cy+unit[i][1]*ry/127,
+                      cx+unit[j][0]*rx/127,cy+unit[j][1]*ry/127,
+                      ring==1?theme::blue:color);
+    }
+  }
+  // A central gate marker responds to reported/locally tracked gate ownership;
+  // its size is a visualization of envelope, never measured oscillator phase.
+  const int core=3+env*extent/(127*6);
+  if(fresh&&env>0)drawPanel(canvas,{cx-core,cy-core,2*core+1,2*core+1},color,color);
+  else drawPanel(canvas,{cx-3,cy-3,7,7},theme::panelActive,theme::line);
+  drawText(canvas,rect.x+8,rect.y+8,fresh?
+      (model.telemetryOrigin==ValueOrigin::Native?"ORBIT MODEL / ENGINE":"ORBIT MODEL / REPORTED"):
+      "ORBIT MODEL / NO STATE",theme::muted,1,30);
+  char values[40];
+  if(fresh)std::snprintf(values,sizeof(values),"ENV %03u  ENERGY %03u",
+      static_cast<unsigned>(clampMidi(model.telemetryMeters[0])),
+      static_cast<unsigned>(clampMidi(model.telemetryMeters[1])));
+  else std::snprintf(values,sizeof(values),"NO FRESH ENVELOPE OR ENERGY");
+  drawText(canvas,rect.x+8,rect.y+rect.h-13,values,theme::muted,1,30);
+}
 void drawPerformanceField(Canvas& canvas,Rect rect,const UiModel& model) {
   drawPanel(canvas,rect,theme::panelActive);
   for(int q=1;q<4;++q){
     fill(canvas,rect.x+q*(rect.w-2)/4,rect.y+2,1,rect.h-4,theme::line);
     fill(canvas,rect.x+2,rect.y+q*(rect.h-2)/4,rect.w-4,1,theme::line);
   }
+  const bool orbit=model.profileIndex==profileIndex("grimoire-native");
   const int meters=std::min<int>(6,model.meterCount);
   const bool measured=model.telemetryAvailable&&meters>0&&model.telemetryOrigin!=ValueOrigin::Unknown;
-  if(measured){
+  if(orbit)drawOrbitModel(canvas,rect,model);
+  else if(measured){
     for(int i=0;i<meters;++i){
       const int x=rect.x+12+(i*2+1)*(rect.w-24)/(meters*2);
       const int amount=visibleStatePeak(model.telemetryMeters[static_cast<std::size_t>(i)])*(rect.h-36)/127;
@@ -426,13 +471,13 @@ void drawPerformanceField(Canvas& canvas,Rect rect,const UiModel& model) {
       }
     }
   }
-  drawText(canvas,rect.x+8,rect.y+8,measured?(model.telemetryOrigin==ValueOrigin::Native?
+  if(!orbit)drawText(canvas,rect.x+8,rect.y+8,measured?(model.telemetryOrigin==ValueOrigin::Native?
        "SQRT NATIVE STATE PEAKS":"SQRT REPORTED PEAKS"):"LOCAL CONTROL MAP",theme::muted,1,30);
   if(model.xyEnabled&&model.xyOriginX!=ValueOrigin::Unknown&&model.xyOriginY!=ValueOrigin::Unknown){
     const int x=rect.x+6+clampMidi(model.xyX)*(rect.w-13)/127;
     const int y=rect.y+6+(127-clampMidi(model.xyY))*(rect.h-13)/127;
     const uint16_t tint=model.noteHeld?theme::text:originColor(model.xyOriginX);
-    if(!measured){
+    if(!orbit&&!measured){
       // This geometric mapping derives only from the two control positions.
       // It deliberately makes no spectral or audio-meter claim.
       const int radius=10+clampMidi(model.xyY)*18/127;
