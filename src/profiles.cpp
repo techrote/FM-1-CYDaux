@@ -42,6 +42,26 @@ const Profile kProfiles[] = {
           {"Accent", 20, 64}, {"Wave", 21, 0}, {"Drive", 22, 32}, {"Slide", 23, 48}}},
         false, true, false, false,
         "USB bridge; 303 A/B on channels 2/3. CC OUT KNOBS/ALL enables feedback."
+    },
+    {
+        "zaaggenz-native", "ZaaggenZ", "Native procedural / six characters", "ac21d089+CY1",
+        1, {{1, 0, 0, 0, 0, 0, 0, 0}},
+        {{"Instrument", "", "", "", "", "", "", ""}},
+        {{{"Grit", 16, 90}, {"Vowel", 17, 60}, {"Motion", 18, 42}, {"Character", 19, 0},
+          {"Attack", 20, 5}, {"Release", 21, 35}, {"Body", 22, 20}, {"Sub", 23, 40}}},
+        false, false, false, false,
+        "Native endpoint required. Unmodified Fune has no CY discovery or these CCs.",
+        {{0xff, 0, 0, 0, 0, 0, 0, 0}}
+    },
+    {
+        "xenoresonator-native", "Xenoresonator", "Coupled materials / native core", "fa27a317+CY1",
+        1, {{1, 0, 0, 0, 0, 0, 0, 0}},
+        {{"Body", "", "", "", "", "", "", ""}},
+        {{{"Excite", 16, 76}, {"Damping", 17, 38}, {"Coupling", 18, 48}, {"Material", 19, 0},
+          {"", 0, 0}, {"", 0, 0}, {"", 0, 0}, {"", 0, 0}}},
+        false, false, false, false,
+        "Native endpoint required. No verified physical FM-1 MIDI mapping.",
+        {{0x0f, 0, 0, 0, 0, 0, 0, 0}}
     }
 };
 } // namespace

@@ -1,0 +1,30 @@
+{
+  "repository": "https://github.com/techrote/ZaaggenZ-FM1",
+  "revision": "ac21d089e7afce6bc7adc555deb0ce90b56a39cd",
+  "license": "MIT for original implementation code; source-image assets excluded",
+  "files_sha256": {
+    "LICENSE": "f14fffe99ffd910fb3e9dbf980d7b7aef87bdd17f21e0fa86195d6521fc3092d",
+    "THIRD_PARTY_NOTICES.md": "6a38ef0578071520e4b3dfe6211880f41ec1d4273acf0f35d2062b9fd1f6043a",
+    "include/zg/dsp.h": "99c03bcce558a742f71961516f58ad336b9f1d69b34d62fb497771d3c8be54af",
+    "include/zg/engine.h": "2fe3fff12698eacf24de5cf41ecb7a3ff3162529f482354456a2cbccdf37dc08",
+    "include/zg/source_bank.h": "fd08951a90c6577bba5cbffed7612d446f88424b87166cbe93c162367b2c34c1",
+    "src/dsp.c": "3551d12f5f13c4822e2865a45fd6fbea77f0161bdffbcc1228640cd812946b6c",
+    "src/dsp_tables.inc": "b6a79dda84e041a5b5ad417c633da54c401b0c31e640abc5a4fe441207cb95ff",
+    "src/engine.c": "f3ca1a419bb26e8b306c415fde7b7a501c9015c248d36cf4656fd64c30cb3e58",
+    "src/pitch_tables.inc": "0cbe55f7cece419b6ed7f87b465f3d5812e90de6198a36c844bb73c83ab25abd",
+    "src/presets.c": "56fa4a7d99e24441bc4dca408c4caf3973562319dc2790fa8935f40f37cca43b",
+    "src/source_bank.c": "4c4e3b5e962224e43e5b8ecb04f959edd73f9e54cd05f207a0f0303287576b25"
+  },
+  "local_files": {
+    "src/source_bank_data.inc": "Empty source bank for procedural native-only adapter; not copied upstream"
+  },
+  "selected_native_presets": [
+    2,
+    7,
+    14,
+    19,
+    24,
+    31
+  ],
+  "modifications": "All vendored original files byte-identical. Local adapter forces ZG_NATIVE; source-image and hybrid modes unavailable."
+}

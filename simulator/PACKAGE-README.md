@@ -1,105 +1,113 @@
-# FM-1 CYDaux desktop simulator
+# CYDaux Companion Studio
 
-This package runs the same C++ controller, 320 × 240 renderer and touch handling
-as the CYD firmware. It lets you try the interface before the FM-1 arrives.
-**It produces no sound. All instrument and radio connections in this package
-are simulated.** No CYD, FM-1, MIDI driver or compiler is needed.
+This evaluator runs the actual shared C++ CYD controller, renderer and touch
+handling together with two real portable instrument engines. You can select
+an instrument, play notes, change its sound, draw an XY gesture, edit a local
+step sequence and hear the resulting native-engine audio in your browser.
 
-Extract the **whole ZIP** to a folder before running it. Keep `run.py`,
-`index.html` and the native executable together. Python **3.10 or later** is
-required; the Python frontend uses only its standard library.
+**Extract the entire ZIP before launching.** Keep the executable, frontend,
+source notices and manifest together. No CYD, FM-1, MIDI driver or compiler is
+needed for this evaluator.
 
 ## Windows
 
-Double-click **Open-Simulator.cmd** in this folder. It starts the native
-simulator and opens your browser at `http://127.0.0.1:8781/`.
+Double-click **CYDaux-Evaluator.exe**. It opens the studio at
+`http://127.0.0.1:8781/` in your default browser. The standalone launcher bundles
+its Python runtime, so no separate Python installation is required. Leave its
+console window open while playing; press Ctrl+C there when finished.
 
-To start it from a terminal opened in this folder:
+The package also includes `Open-Simulator.cmd` / `run.py` as a fallback for an
+existing Python 3.10+ installation. `fm1-simulator.exe` is the native rendering
+and instrument process; launching it by itself opens the scripting interface.
 
-```console
-py -3 run.py
-```
-
-Use `python run.py` instead if your Python installation provides `python` but
-not `py`. Keep the console window open while using the simulator. Press Ctrl+C
-there to stop it. Closing the browser tab alone does not stop the local server.
+If the browser does not open, use the address printed in the console. To choose
+another port, run `CYDaux-Evaluator.exe --port 8782` from a terminal in this folder.
 
 ## Linux
 
-Open a terminal in the extracted folder. Restore the native executable's
-permission if the download/extraction did not preserve it, then start Python:
+The Linux package uses Python 3.10+ and its standard library:
 
 ```console
 chmod +x fm1-simulator
 python3 run.py
 ```
 
-The Linux executable is built on the project's CI runner. If your Linux system
-cannot load that binary or its runtime libraries, use the matching source
-checkout and build the native simulator for your system. The repository guide
-documents that separate source workflow.
+If the runner-built binary cannot load on your Linux system, build the matching
+source checkout for your system. The package contains pinned instrument source
+and notices; the repository contains the complete companion build.
 
-## Try the interface
+## First sound
 
-- Click or drag the controls inside the simulated display. Its pixels and hit
-  targets come from the C++ UI, rather than a separate browser mockup.
-- Use Play, Mix, XY and Link, or press keys 1–4 with the display focused.
-- Hold NOTE, or hold Space on Play/XY with the display focused, then release it.
-  Releasing outside the display also ends a held note.
-- Tap the firmware name, track or bank selector in the display header to cycle
-  it. The firmware dropdown outside the display offers direct selection.
-- Choose a mock connection and Connect mock to inspect outgoing MIDI bytes.
-  Mock Bluetooth is offered for Melodee; mock Wi-Fi is available for all profiles.
-- Use Link → Setup to preview the device setup screen. Its `CYDaux-DEMO`
-  credentials are an example: this simulator does not create an access point.
+1. Select **Xenoresonator Native** or **ZaaggenZ Native** in the instrument
+   dropdown. The studio selects and connects its native endpoint.
+2. Click **Enable sound**. Browser policy requires this user gesture before
+   audio can start. Begin at a comfortable listening level.
+3. Focus the display and hold **Space**, or hold its **NOTE** control. Release
+   the key or pointer to release the note. Xenoresonator makes short percussive
+   sounds; ZaaggenZ supports sustained notes.
+4. Drag a control on **Play**. The displayed returned values have a **NATIVE**
+   origin because they come from the actual portable engine.
+5. Open **XY**, hold or sweep the pad, then try **Steps** and **Presets**.
+   **Panic** silences the engine and clears scheduled browser sound immediately.
 
-Selecting a firmware profile changes the control map. It never changes firmware
-on an attached instrument. This browser simulator opens no real MIDI ports or
-Bluetooth connection and does not connect to the separate LAN bridge program.
+The six navigation buttons correspond to keyboard digits 1–6 when the display
+is focused. The local step sequencer sends ordinary note performance through
+the common controller. Pattern editing is companion-owned; it does not imply
+that an instrument has returned a hardware sequencer pattern.
 
-## Read the state labels
+Changing instruments or presets clears previously queued audio. Stopping sound,
+losing browser focus, hiding the tab and closing the page release active
+performance. If the browser disappears without sending a release, the server
+stops the audio clock and panics after its 750 ms consumption lease expires.
+Re-enable sound after returning to the page.
 
-Local values are labelled DEMO. On a mock connection, values begin UNKNOWN.
-With **Mock device returns control values** unchecked, a successful simulated
-write becomes SENT. With it checked, the injected mock reply becomes DEMO,
-because it is simulated data. MOCK LINK remains visible in both cases.
+## What is generating the sound?
 
-DEVICE is reserved by the shared controller for MIDI values received from a
-connection that is not marked as a mock. A SENT label never proves that an
-instrument applied the command. The XY cursor stays hidden while either axis
-is unknown, and it follows the selected track's first two parameters regardless
-of the selected control bank.
+- **ZaaggenZ Native:** the pinned ZaaggenZ-FM1 portable procedural synthesis core,
+  44.1 kHz mono. Six character presets use its actual source, envelopes, layered
+  synthesis and effects. The source-image/hybrid assets from the separate
+  ZaaggenZ delivery are excluded here. Crushed Teeth Native is a native-mode
+  adaptation of its factory patch; this evaluator does not claim source-image
+  equivalence.
+- **Xenoresonator Native:** the pinned VIBEWARE six-mode modal material engine,
+  24 kHz mono, with Ceramic, Woodglass, Alien metal and Membrane presets.
+  Excitation, damping, coupling and material changes reach the actual core.
 
-The browser simulator's simple CC-return option is separate from the
-profile-aware PC bridge mock, which can exercise SLOOP INFO/LIVE negotiation.
-See the repository for that network integration workflow.
+The browser plays PCM produced by these C engines. It contains no substitute
+JavaScript synthesizer. It performs playback-rate conversion through Web Audio.
+The scheduling display shows this desktop player's current buffered audio and
+underruns, not BLE, USB, physical FM-1 latency or an ESP32 measurement.
 
-## If the browser does not open
+The on-screen state views use actual native-engine observations. Their six
+channels are ZaaggenZ role peaks or Xenoresonator modal magnitude proxies.
+Transient maxima are retained between state replies; these are not calibrated
+acoustic measurements. No physical device is providing these values.
 
-Open the URL printed in the console yourself. You can also start without
-automatic browser opening:
+## Existing firmware profiles
 
-```console
-python run.py --no-open
-```
+Melodee, SLOOP, Skiff and X0X remain available. **Local demo** and **Mock
+Bluetooth / Mock Wi-Fi** let you examine their existing interfaces and message
+semantics. These mock modes produce no sound and open no real radio or MIDI port.
+Their values remain labelled **DEMO**, **UNKNOWN**, **QUEUED** or **SENT** as
+appropriate. A SENT value only means the transport accepted a command.
 
-If port 8781 is already in use, select another local port:
+Selecting a profile never replaces firmware on an attached instrument. This
+studio does not flash the CYD or FM-1. The separate physical CYD firmware and
+USB bridge have their own installation and acceptance procedures.
 
-```console
-python run.py --port 8782
-```
+## Evidence and identity
 
-On Linux use `python3`; on Windows `py -3` is also accepted. A missing executable
-usually means the ZIP was not fully extracted or the wrong platform package was
-downloaded. This package has no C++ source tree, so use its included executable.
+`manifest.json` identifies the exact source revision and hashes the delivered
+files. `THIRD_PARTY.md`, `licenses/` and `third_party/` retain the engine source,
+license identities and exact upstream pins. Original ZaaggenZ code is MIT;
+Xenoresonator retains its owner-provided unspecified license identity. No new
+permissive grant is asserted for that engine.
 
-## Package identity and development status
+Passing this evaluator establishes software behavior for the named build. It
+does not establish physical CYD display/touch behavior, FM-1 installation,
+wireless pairing, real USB ports, audio-driver playback, target timing, power,
+stack/heap margins or physical recovery. The principal repository PR remains
+Draft/HOLD pending owner review.
 
-`manifest.json` records the source commit, platform and native executable hash.
-`LICENSE` and `THIRD_PARTY.md` record project and dependency notices. The original
-application is MIT licensed. Physical CYD/FM-1 acceptance is still pending;
-successful simulation does not establish pairing, musical response or hardware
-latency.
-
-Source, build instructions, firmware profiles, USB bridge and hardware checklist:
+Source and complete development instructions:
 <https://github.com/techrote/FM-1-CYDaux>

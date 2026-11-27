@@ -43,7 +43,7 @@ void checkLiveRejected(const Bytes& bytes, const char* message) {
           "rejected LIVE must not partially mutate state");
 }
 void testProfiles() {
-    check(fm1::profileCount() == 4, "four curated profiles");
+    check(fm1::profileCount() == 6, "four legacy profiles plus two negotiated native endpoints");
     check(fm1::profileIndex(nullptr) == -1 && fm1::profileIndex("unknown") == -1,
           "unknown profile id");
     const uint8_t expected[4][8] = {
@@ -60,7 +60,7 @@ void testProfiles() {
             check(profile.channels[t] >= 1 && profile.channels[t] <= 16 &&
                   profile.trackNames[t] && *profile.trackNames[t], "human MIDI channels");
         for (std::size_t v = 0; v < fm1::kProfileControls; ++v) {
-            check(profile.parameters[v].cc == expected[p][v], "audited CC map");
+            if (p < 4) check(profile.parameters[v].cc == expected[p][v], "audited legacy CC map");
             check(profile.parameters[v].initial <= 127, "demo initial range");
         }
     }

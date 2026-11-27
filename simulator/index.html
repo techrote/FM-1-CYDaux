@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FM-1 CYDaux · Simulator</title>
+<title>FM-1 CYDaux · Companion Studio</title>
 <style>
 :root{color-scheme:dark;--bg:#090e16;--panel:#111b28;--line:#263447;--text:#e8eff7;--muted:#9badc2;--mint:#42deb8;--amber:#f6bc64}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#12352f99,transparent 46%),var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.5}
 button,select{font:inherit}button,select,a{touch-action:manipulation}button,select{color:var(--text);background:#182638;border:1px solid #35475e;border-radius:8px;min-height:38px;padding:7px 12px}button{cursor:pointer}button:hover{border-color:var(--mint);background:#1b343b}button:disabled{opacity:.4;cursor:default}button:focus-visible,select:focus-visible,canvas:focus-visible{outline:2px solid var(--mint);outline-offset:4px}select{width:100%}a{color:var(--mint)}
-.shell{max-width:1150px;padding:34px 26px 40px;margin:auto}.masthead{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}.brand{display:flex;align-items:center;gap:15px}.mark{display:grid;grid-template-columns:repeat(3,7px);gap:4px;transform:rotate(-8deg)}.mark i{height:21px;border-radius:2px;background:var(--mint)}.mark i:nth-child(2){height:30px;margin-top:-5px}.mark i:nth-child(3){height:16px;margin-top:4px}.brand h1{font-size:23px;letter-spacing:-.6px;line-height:1.15;margin:0}.brand h1 span{font-weight:400;color:var(--muted)}.brand p{font-size:12px;margin:4px 0 0;color:var(--muted)}.tag{border:1px solid #6f5631;background:#302718;color:var(--amber);border-radius:30px;padding:6px 12px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;font-weight:700}.layout{display:grid;grid-template-columns:minmax(0,704px) minmax(265px,1fr);gap:24px}.device-area{min-width:0}.device{padding:18px 18px 15px;border-radius:19px;background:linear-gradient(145deg,#25303f,#121c29);border:1px solid #425167;box-shadow:0 22px 70px #0008,0 1px 0 #ffffff1a inset}.device-top{display:flex;justify-content:space-between;color:#b6c5d6;font-size:10px;letter-spacing:1.2px;margin:0 5px 12px}.light{width:6px;height:6px;display:inline-block;background:var(--mint);border-radius:100%;box-shadow:0 0 10px #42deb878;margin-right:6px}.screen-wrap{padding:8px;border-radius:7px;background:#05090e;border:1px solid #39475a}.screen-wrap canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair;background:#0d131c;border-radius:2px;outline:none}.device-foot{display:flex;justify-content:space-between;align-items:center;padding:12px 5px 0;color:#9aa9ba;font-size:10px;letter-spacing:.8px}.usb{width:32px;height:8px;border-radius:7px;background:#05090e;border:1px solid #465266}.quick-tabs{display:flex;gap:8px;margin:18px 0 0}.quick-tabs button{flex:1;font-size:12px}.hint{margin:13px 2px;color:var(--muted);font-size:12px}.hint kbd{font:11px ui-monospace,monospace;border:1px solid #405065;padding:1px 4px;border-radius:3px;color:#e8eff7}.panel{background:#111b28dd;border:1px solid var(--line);border-radius:12px;padding:17px;margin-bottom:15px}.eyebrow{font-size:10px;font-weight:750;color:var(--mint);letter-spacing:1.5px;text-transform:uppercase;margin:0 0 10px}.description{color:var(--muted);font-size:12px;margin:11px 0 8px;min-height:35px}.version{color:#a5b7cb;font:10px ui-monospace,monospace;word-break:break-word}.setup-hint{font-size:11px;color:#b5c6d8;border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.row+.row{margin-top:8px}.small{font-size:11px;color:var(--muted)}.mode-label{display:block;margin-bottom:7px;font-size:12px;color:var(--muted)}.buttons{display:flex;gap:8px;margin:11px 0}.buttons button{flex:1;font-size:11px;padding:7px}.check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}.check input{accent-color:var(--mint)}.notice{color:var(--amber);font-size:11px;padding:9px 0 0;min-height:32px}.values{display:grid;grid-template-columns:1fr 1fr;gap:8px}.value{padding:10px;border:1px solid #2a3c50;border-radius:7px;background:#0d1622}.value .label{display:block;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.value strong{font:22px ui-monospace,monospace;font-weight:500;display:block;margin:3px 0}.value em{font-style:normal;color:var(--amber);text-transform:uppercase;font-size:9px;letter-spacing:1px}.monitor{margin-top:22px}.monitor-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.monitor-head h2{font-size:12px;margin:0;font-weight:600}.counters{font:10px ui-monospace,monospace;color:var(--muted)}.midi{margin:0;height:100px;overflow:auto;background:#080f18;border:1px solid #243447;padding:12px;border-radius:8px;font:11px/1.75 ui-monospace,monospace;color:#9fcabc;white-space:pre-wrap}.footnote{margin-top:20px;border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:11px;display:flex;gap:20px;justify-content:space-between}.error{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);max-width:90vw;background:#4a2030;color:#ffd4df;border:1px solid #ad526d;border-radius:9px;padding:12px 18px;font-size:12px;box-shadow:0 8px 30px #0008}
+.shell{max-width:1150px;padding:34px 26px 40px;margin:auto}.masthead{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}.brand{display:flex;align-items:center;gap:15px}.mark{display:grid;grid-template-columns:repeat(3,7px);gap:4px;transform:rotate(-8deg)}.mark i{height:21px;border-radius:2px;background:var(--mint)}.mark i:nth-child(2){height:30px;margin-top:-5px}.mark i:nth-child(3){height:16px;margin-top:4px}.brand h1{font-size:23px;letter-spacing:-.6px;line-height:1.15;margin:0}.brand h1 span{font-weight:400;color:var(--muted)}.brand p{font-size:12px;margin:4px 0 0;color:var(--muted)}.tag{border:1px solid #6f5631;background:#302718;color:var(--amber);border-radius:30px;padding:6px 12px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;font-weight:700}.layout{display:grid;grid-template-columns:minmax(0,704px) minmax(265px,1fr);gap:24px}.device-area{min-width:0}.device{padding:18px 18px 15px;border-radius:19px;background:linear-gradient(145deg,#25303f,#121c29);border:1px solid #425167;box-shadow:0 22px 70px #0008,0 1px 0 #ffffff1a inset}.device-top{display:flex;justify-content:space-between;color:#b6c5d6;font-size:10px;letter-spacing:1.2px;margin:0 5px 12px}.light{width:6px;height:6px;display:inline-block;background:var(--mint);border-radius:100%;box-shadow:0 0 10px #42deb878;margin-right:6px}.screen-wrap{padding:8px;border-radius:7px;background:#05090e;border:1px solid #39475a}.screen-wrap canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair;background:#0d131c;border-radius:2px;outline:none}.device-foot{display:flex;justify-content:space-between;align-items:center;padding:12px 5px 0;color:#9aa9ba;font-size:10px;letter-spacing:.8px}.usb{width:32px;height:8px;border-radius:7px;background:#05090e;border:1px solid #465266}.quick-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}.quick-tabs button{flex:1 1 28%;font-size:12px}.hint{margin:13px 2px;color:var(--muted);font-size:12px}.hint kbd{font:11px ui-monospace,monospace;border:1px solid #405065;padding:1px 4px;border-radius:3px;color:#e8eff7}.panel{background:#111b28dd;border:1px solid var(--line);border-radius:12px;padding:17px;margin-bottom:15px}.eyebrow{font-size:10px;font-weight:750;color:var(--mint);letter-spacing:1.5px;text-transform:uppercase;margin:0 0 10px}.description{color:var(--muted);font-size:12px;margin:11px 0 8px;min-height:35px}.version{color:#a5b7cb;font:10px ui-monospace,monospace;word-break:break-word}.setup-hint{font-size:11px;color:#b5c6d8;border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.row+.row{margin-top:8px}.small{font-size:11px;color:var(--muted)}.mode-label{display:block;margin-bottom:7px;font-size:12px;color:var(--muted)}.buttons{display:flex;gap:8px;margin:11px 0}.buttons button{flex:1;font-size:11px;padding:7px}.check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}.check input{accent-color:var(--mint)}.notice{color:var(--amber);font-size:11px;padding:9px 0 0;min-height:32px}.values{display:grid;grid-template-columns:1fr 1fr;gap:8px}.value{padding:10px;border:1px solid #2a3c50;border-radius:7px;background:#0d1622}.value .label{display:block;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.value strong{font:22px ui-monospace,monospace;font-weight:500;display:block;margin:3px 0}.value em{font-style:normal;color:var(--amber);text-transform:uppercase;font-size:9px;letter-spacing:1px}.monitor{margin-top:22px}.monitor-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.monitor-head h2{font-size:12px;margin:0;font-weight:600}.counters{font:10px ui-monospace,monospace;color:var(--muted)}.midi{margin:0;height:100px;overflow:auto;background:#080f18;border:1px solid #243447;padding:12px;border-radius:8px;font:11px/1.75 ui-monospace,monospace;color:#9fcabc;white-space:pre-wrap}.footnote{margin-top:20px;border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:11px;display:flex;gap:20px;justify-content:space-between}.error{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);max-width:90vw;background:#4a2030;color:#ffd4df;border:1px solid #ad526d;border-radius:9px;padding:12px 18px;font-size:12px;box-shadow:0 8px 30px #0008}
 @media(max-width:850px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:14px}.side .panel:last-child{grid-column:1/-1}.panel{margin-bottom:0}.shell{max-width:720px}.masthead{align-items:flex-start}.tag{font-size:9px}}
 @media(max-width:480px){.shell{padding:20px 12px}.brand h1{font-size:19px}.masthead{gap:8px;margin-bottom:22px}.tag{padding:4px 7px;max-width:115px;text-align:center}.side{grid-template-columns:1fr}.side .panel:last-child{grid-column:auto}.device{padding:10px}.screen-wrap{padding:4px}.quick-tabs{gap:5px}.quick-tabs button{padding:6px}.footnote{display:block}.footnote p{margin:5px 0}}
 </style>
@@ -17,35 +17,44 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 <main class="shell">
 <header class="masthead">
 <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><div><h1>FM-1 <span>CYDaux</span></h1><p>A small screen for a bigger instrument.</p></div></div>
-<span class="tag">Hardware-free simulator</span>
+<span class="tag">Hardware-free simulator · actual engine audio</span>
 </header>
 <div class="layout">
 <section class="device-area" aria-label="CYD display simulator">
 <div class="device">
 <div class="device-top"><span><i class="light"></i>ESP32-2432S028R</span><span>320 × 240 TOUCH</span></div>
-<div class="screen-wrap"><canvas id="screen" width="320" height="240" tabindex="0" aria-label="Interactive CYD display. Click or drag controls. Space holds a note; keys 1 to 4 change pages."></canvas></div>
+<div class="screen-wrap"><canvas id="screen" width="320" height="240" tabindex="0" aria-label="Interactive CYD display. Click or drag controls. Space holds a note; keys 1 to 6 change pages."></canvas></div>
 <div class="device-foot"><span>FM-1 COMPANION</span><span class="usb" aria-hidden="true"></span><span>SINGLE TOUCH</span></div>
 </div>
-<nav class="quick-tabs" aria-label="Display pages"><button data-page="play">1 · Play</button><button data-page="mix">2 · Mixer</button><button data-page="xy">3 · XY pad</button><button data-page="link">4 · Connection</button></nav>
+<nav class="quick-tabs" aria-label="Display pages"><button data-page="play">1 · Play</button><button data-page="mix">2 · Mixer</button><button data-page="xy">3 · XY pad</button><button data-page="link">4 · Connection</button><button data-page="sequence">5 · Steps</button><button data-page="presets">6 · Presets</button></nav>
 <p class="hint">Drag the values. Hold <kbd>Space</kbd> to audition a note. Tap the firmware, track or bank in the display header to cycle it.</p>
-<div class="monitor"><div class="monitor-head"><h2>Outgoing MIDI · simulated connection</h2><span id="counts" class="counters">TX 0 · RX 0</span></div><pre id="midi" class="midi">Local demo changes the interface without sending MIDI. Choose a mock connection to inspect messages.</pre></div>
+<div class="monitor"><div class="monitor-head"><h2>Companion transport monitor</h2><span id="counts" class="counters">TX 0 · RX 0</span></div><pre id="midi" class="midi">Local demo changes the interface without sending MIDI. Choose a mock connection to inspect messages.</pre></div>
 </section>
 <aside class="side">
 <section class="panel"><p class="eyebrow">Choose your instrument</p><label for="profile" class="mode-label">Firmware profile</label><select id="profile"><option>Loading…</option></select><p id="description" class="description"></p><div id="version" class="version"></div><p id="setupHint" class="setup-hint"></p></section>
-<section class="panel"><p class="eyebrow">Try the connection states</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option></select><div class="buttons"><button id="connect">Connect mock</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock device returns control values</label><div id="notice" class="notice" role="status"></div></section>
-<section class="panel"><p class="eyebrow">Current control bank</p><div id="values" class="values"></div><p class="small" style="margin-bottom:0">Unknown values stay blank until changed or received. “Sent” is a command; “Device” is returned state from a real connection. Mock replies stay “Demo”. Every connection here is a mock.</p></section>
+<section class="panel"><p class="eyebrow">Connection &amp; sound</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option><option value="native">Actual native audio engine</option></select><div class="buttons"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock device returns control values</label><div id="notice" class="notice" role="status"></div>
+<div class="buttons"><button id="audioStart">Enable sound</button><button id="panic">Panic</button></div>
+<label class="check" for="volume">Listening level <input id="volume" type="range" min="0" max="100" value="60" style="width:105px"></label>
+<div id="audioStatus" class="small" role="status">Choose ZaaggenZ Native or Xenoresonator Native, then enable sound.</div></section>
+<section class="panel"><p class="eyebrow">Current control bank</p><div id="values" class="values"></div><p class="small" style="margin-bottom:0">Unknown values stay blank until changed or received. “Sent” is a command; “Device” is returned state from a real connection. Mock replies stay “Demo”. “Native” is actual portable-engine readback on this computer.</p></section>
 </aside>
 </div>
-<footer class="footnote"><p>The display uses the same interface and touch handling as the CYD firmware.</p><p>This previews controls and MIDI. It does not emulate instrument sound.</p></footer>
+<footer class="footnote"><p>The display uses the same interface and touch handling as the CYD firmware.</p><p>ZaaggenZ and Xenoresonator generate actual native-core audio. No FM-1 CPU, radio or physical hardware is emulated.</p></footer>
 </main>
 <div id="error" class="error" role="alert"></div>
+<script src="/audio.js"></script>
 <script>
 "use strict";
 const screen=document.getElementById("screen"),ctx=screen.getContext("2d");
 const profile=document.getElementById("profile"),transport=document.getElementById("transport");
 let state=null,revision=-1,imageSerial=0,queue=Promise.resolve(),activePointer=null,pendingMove=null,moveScheduled=false,spaceHeld=false;
 let lastPoll=false,errorTimer=null;
-const pageNames=["play","mix","xy","link"];
+const pageNames=["play","mix","xy","link","sequence","presets"];
+const audioPlayer=new NativeAudioPlayer(control,stats=>{
+ document.getElementById("audioStart").textContent=stats.running?"Stop sound":"Enable sound";
+ document.getElementById("audioStatus").textContent=stats.error?String(stats.error.message||stats.error):stats.running?"Native PCM · "+(stats.rate||"…")+" Hz · "+Math.round(stats.ahead*1000)+" ms queued · "+stats.underruns+" underruns":"Sound stopped. Notes and sequence released.";
+ if(stats.error)showError(stats.error);
+});
 function showError(error){const box=document.getElementById("error");box.textContent=String(error.message||error);box.style.display="block";clearTimeout(errorTimer);errorTimer=setTimeout(()=>box.style.display="none",7000);}
 async function request(path,body){const response=await fetch(path,body?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||"Simulator request failed");return data;}
 function frame(){const serial=++imageSerial;const image=new Image();image.onload=()=>{if(serial===imageSerial){ctx.imageSmoothingEnabled=false;ctx.drawImage(image,0,0,320,240);}};image.src="/api/frame.png?v="+serial;}
@@ -54,7 +63,11 @@ function update(next){
  state=next;
  const ids=next.profiles.map(item=>item.id).join("|");
  if(profile.dataset.ids!==ids){profile.replaceChildren();next.profiles.forEach(item=>{const option=document.createElement("option");option.value=item.id;option.textContent=item.name;profile.appendChild(option);});profile.dataset.ids=ids;}
- profile.value=next.profile;transport.value=["demo","ble","wifi"][next.transport];
+ profile.value=next.profile;transport.value=["demo","ble","wifi","native"][next.transport];
+ transport.options[3].disabled=!next.nativeSupported;
+ document.getElementById("audioStart").disabled=!next.nativeSupported;
+ document.getElementById("connect").textContent=next.transport===3?"Connect engine":"Connect mock";
+ if(next.audio){audioPlayer.synchronize(next.audio.generation);}
  transport.options[1].disabled=!next.bleSupported;
  document.getElementById("description").textContent=next.description;
  document.getElementById("version").textContent=next.sourceVersion?"Protocol reference · "+next.sourceVersion:"";
@@ -64,34 +77,55 @@ function update(next){
  document.getElementById("disconnect").disabled=next.connection!==2&&next.connection!==1;
  document.getElementById("counts").textContent="TX "+next.tx+" · RX "+next.rx;
  const values=document.getElementById("values");values.replaceChildren();
- next.controls.forEach(control=>{const cell=document.createElement("div");cell.className="value";const label=document.createElement("span");label.className="label";label.textContent=control.enabled?control.label:"Unavailable";const value=document.createElement("strong");value.textContent=control.value<0?"—":String(control.value).padStart(3,"0");const origin=document.createElement("em");origin.textContent=control.origin;cell.append(label,value,origin);values.appendChild(cell);});
+ next.controls.forEach(control=>{const cell=document.createElement("div");cell.className="value";const label=document.createElement("span");label.className="label";label.textContent=control.enabled?control.label:"Unavailable";const value=document.createElement("strong");value.textContent=control.value<0?"—":control.display||String(control.value).padStart(3,"0");const origin=document.createElement("em");origin.textContent=control.origin;cell.append(label,value,origin);values.appendChild(cell);});
  if(next.midi.length){const log=document.getElementById("midi");const lines=next.midi.map(bytes=>bytes.map(value=>value.toString(16).toUpperCase().padStart(2,"0")).join(" "));const text=lines.join("\n");if(log.textContent!==text){log.textContent=text;log.scrollTop=log.scrollHeight;}}
  if(next.revision!==revision){revision=next.revision;frame();}
 }
 function post(path,body){queue=queue.then(()=>request(path,body)).then(update).catch(showError);return queue;}
-function control(name,value){return post("/api/control",{name:name,value:value||""});}
+function control(name,value){
+ if(["profile","transport","disconnect","panic","preset"].includes(name)&&typeof audioPlayer!=="undefined")audioPlayer.flush();
+ return post("/api/control",{name:name,value:value||""});
+}
 function point(event){const box=screen.getBoundingClientRect();return{x:Math.round((event.clientX-box.left)*320/box.width),y:Math.round((event.clientY-box.top)*240/box.height)};}
 function touch(phase,p){return post("/api/touch",{phase:phase,x:p?p.x:0,y:p?p.y:0});}
+function keyboardNote(velocity){return post("/api/note",{note:state&&state.note||60,velocity:velocity});}
 screen.addEventListener("pointerdown",event=>{if(activePointer!==null||event.button!==0)return;event.preventDefault();activePointer=event.pointerId;screen.setPointerCapture(event.pointerId);screen.focus();touch("down",point(event));});
 screen.addEventListener("pointermove",event=>{if(activePointer!==event.pointerId)return;event.preventDefault();pendingMove=point(event);if(!moveScheduled){moveScheduled=true;setTimeout(()=>{moveScheduled=false;if(pendingMove&&activePointer!==null){const p=pendingMove;pendingMove=null;touch("move",p);}},35);}});
 function releasePointer(event,cancel){if(activePointer!==event.pointerId)return;event.preventDefault();pendingMove=null;activePointer=null;touch(cancel?"cancel":"up",point(event));}
 screen.addEventListener("pointerup",event=>releasePointer(event,false));
 screen.addEventListener("pointercancel",event=>releasePointer(event,true));
 screen.addEventListener("lostpointercapture",()=>{if(activePointer!==null){activePointer=null;pendingMove=null;touch("cancel");}});
-window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;spaceHeld=false;touch("cancel");});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;spaceHeld=false;touch("cancel");}});
+window.addEventListener("blur",()=>{activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){activePointer=null;pendingMove=null;if(spaceHeld&&state&&state.companionEnabled)keyboardNote(0);spaceHeld=false;touch("cancel");if(audioPlayer.running)audioPlayer.stop().catch(showError);}});
+window.addEventListener("pagehide",()=>{audioPlayer.running=false;audioPlayer.flush();fetch("/api/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"audio-clock",value:"off"}),keepalive:true}).catch(()=>{});});
 document.querySelectorAll("[data-page]").forEach(button=>button.addEventListener("click",()=>control("page",button.dataset.page)));
-profile.addEventListener("change",()=>control("profile",profile.value));
-transport.addEventListener("change",()=>control("transport",transport.value));
+profile.addEventListener("change",async()=>{
+ await control("profile",profile.value);
+ if(state&&state.nativeSupported){await control("transport","native");await control("connect");}
+ else if(audioPlayer.running)await audioPlayer.stop();
+});
+transport.addEventListener("change",async()=>{
+ if(transport.value!=="native"&&audioPlayer.running)await audioPlayer.stop();
+ await control("transport",transport.value);
+});
+document.getElementById("audioStart").addEventListener("click",async()=>{
+ const button=document.getElementById("audioStart");button.disabled=true;
+ try{
+  if(audioPlayer.running){await audioPlayer.stop();}
+  else{if(state.transport!==3)await control("transport","native");if(state.connection!==2)await control("connect");await audioPlayer.start();}
+ }catch(error){showError(error);}finally{button.disabled=!(state&&state.nativeSupported);}
+});
+document.getElementById("volume").addEventListener("input",event=>audioPlayer.setVolume(Number(event.target.value)/100));
+document.getElementById("panic").addEventListener("click",()=>control("panic"));
 document.getElementById("connect").addEventListener("click",()=>control("connect"));
 document.getElementById("disconnect").addEventListener("click",()=>control("disconnect"));
 document.getElementById("echo").addEventListener("change",event=>control("echo",event.target.checked?"on":"off"));
 document.addEventListener("keydown",event=>{
  if(["INPUT","SELECT","BUTTON","TEXTAREA"].includes(event.target.tagName)||event.repeat)return;
- if(event.code==="Space"&&state&&!state.setupActive){event.preventDefault();if(!spaceHeld&&activePointer===null){spaceHeld=true;const p=state.page===2?{x:270,y:80}:{x:160,y:177};if(state.page===0||state.page===2)touch("down",p);}}
- const index=["Digit1","Digit2","Digit3","Digit4"].indexOf(event.code);if(index>=0){event.preventDefault();control("page",pageNames[index]);}
+ if(event.code==="Space"&&state&&!state.setupActive){event.preventDefault();if(!spaceHeld&&activePointer===null){spaceHeld=true;if(state.companionEnabled)keyboardNote(state.velocity||100);else{const p=state.page===2?{x:270,y:80}:{x:160,y:177};if(state.page===0||state.page===2)touch("down",p);}}}
+ const index=["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6"].indexOf(event.code);if(index>=0){event.preventDefault();control("page",pageNames[index]);}
 });
-document.addEventListener("keyup",event=>{if(event.code==="Space"&&spaceHeld){event.preventDefault();spaceHeld=false;touch("cancel");}});
+document.addEventListener("keyup",event=>{if(event.code==="Space"&&spaceHeld){event.preventDefault();spaceHeld=false;if(state&&state.companionEnabled)keyboardNote(0);touch("cancel");}});
 async function poll(){if(lastPoll||document.hidden)return;lastPoll=true;try{update(await request("/api/state"));}catch(error){showError(error);}finally{lastPoll=false;}}
 poll();setInterval(poll,350);
 </script>

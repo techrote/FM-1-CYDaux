@@ -49,18 +49,21 @@ class Ui {
   void touch(TouchPhase phase, int x, int y, const UiModel& model);
   void cancelTouch();
  private:
-  enum class Gesture : uint8_t { None, Button, Control, Level, XY, Note };
+  enum class Gesture : uint8_t { None, Button, Control, Level, XY, Note,
+                                 Step, StepVelocity, StepGate };
   ActionCallback callback_ = nullptr;
   void* context_ = nullptr;
   Gesture gesture_ = Gesture::None;
   Rect capture_{0, 0, 0, 0};
   UiAction button_{ActionType::Refresh};
   int index_ = 0, lastA_ = -1, lastB_ = -1;
+  int startY_ = 0, startNote_ = 60;
+  int noteMinimum_ = 0, noteMaximum_ = 127;
   Page page_ = Page::Play;
   uint8_t profile_ = 0, track_ = 0, bank_ = 0;
   TransportKind transport_ = TransportKind::Demo;
   ConnectionState connection_ = ConnectionState::Offline;
-  bool setup_ = false;
+  bool setup_ = false, fullscreen_ = false, gatedXY_ = false, stepMoved_ = false;
   void emit(UiAction action) const;
   void drag(int x, int y);
 };

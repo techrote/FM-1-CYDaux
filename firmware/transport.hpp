@@ -10,7 +10,7 @@ namespace fm1::device {
 struct LinkConfig {
     char ssid[33] = "", password[65] = "";
     char host[64] = "", token[65] = "", bleAddress[18] = "";
-    char profile[16] = "melodee";
+    char profile[32] = "melodee";
     uint16_t port = 45821;
 };
 enum class LinkEventKind : uint8_t { Connected, Offline, Failed, Waiting, Received, Sent };

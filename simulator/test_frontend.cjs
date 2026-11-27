@@ -48,10 +48,10 @@ async function main() {
   });
 
   const ids = ["screen", "profile", "transport", "description", "version", "setupHint",
-    "notice", "connect", "disconnect", "counts", "values", "midi", "echo", "error"];
+    "notice", "connect", "disconnect", "counts", "values", "midi", "echo", "error", "audioStart", "audioStatus", "volume", "panic"];
   const elements = Object.fromEntries(ids.map(id => [id,
     new Element(id === "screen" ? "CANVAS" : "DIV")]));
-  elements.transport.options = [{}, {}, {}];
+  elements.transport.options = [{}, {}, {}, {}];
   const document = new Element();
   Object.assign(document, {hidden: false,
     getElementById: id => elements[id],
@@ -63,6 +63,7 @@ async function main() {
     setTimeout: () => 1, clearTimeout() {}, setInterval() {}, console};
   vm.createContext(context);
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "audio.js"), "utf8"), context);
   vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], context);
   const run = async code => await vm.runInContext(code, context);
   const event = (x, y, extra = {}) => ({pointerId: 1, button: 0,

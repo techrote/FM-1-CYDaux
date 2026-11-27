@@ -1,5 +1,6 @@
 #include "transport.hpp"
 #include "fm1/midi.hpp"
+#include "fm1/companion.hpp"
 #include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 #include <WiFi.h>
@@ -33,6 +34,7 @@ bool TransportService::begin() {
     return false;
 }
 uint32_t TransportService::connect(TransportKind kind,const LinkConfig& config) {
+    if (kind!=TransportKind::Ble && kind!=TransportKind::Wifi) return disconnect();
     acceptMidi_.store(false); ++midiEpoch_;
     const uint32_t generation=++requested_;
     xQueueReset(commands_);
@@ -85,6 +87,7 @@ void TransportService::run() {
     TransportKind mode=TransportKind::Demo;
     uint32_t generation=0, lastRx=0, lastPing=0, ping=0;
     uint16_t noteChannels=0;
+    CompanionReleaseTracker companionRelease;
     char line[2049]; std::size_t lineSize=0;
     StaticJsonDocument<4608> json;
     BleMidiDecoder decoder;
@@ -110,6 +113,11 @@ void TransportService::run() {
     };
     auto releaseNotes=[&]() {
         bool success=true;
+        const auto companionPanic=companionRelease.panicMessage();
+        if (companionPanic.size) {
+            if (transmit(companionPanic)) companionRelease.sent(companionPanic);
+            else success=false;
+        }
         for (uint8_t ch=0;ch<16;++ch) if (noteChannels&(1u<<ch)) {
             MidiMessage off; off.size=3; off.data[0]=0xb0|ch; off.data[1]=64;
             if (!transmit(off)) success=false;
@@ -124,7 +132,7 @@ void TransportService::run() {
         bleGeneration_.store(0);
         // Independent release fallback covers queued/cancelled controller events.
         if (ready) releaseNotes();
-        ready=false; helloSeen=false; noteChannels=0;
+        ready=false; helloSeen=false; noteChannels=0; companionRelease.reset();
         if (ble && ble->isConnected()) ble->disconnect();
         characteristic=nullptr;
         socket.stop(); lineSize=0;
@@ -147,6 +155,7 @@ void TransportService::run() {
             if (command.kind==CommandKind::Midi) {
                 if (command.generation==generation && command.midiEpoch==midiEpoch_.load() && ready) {
                     if (transmit(command.midi)) {
+                        companionRelease.sent(command.midi);
                         if (command.midi.size==3 && (command.midi.data[0]&0xf0)==0x90 && command.midi.data[2])
                             noteChannels|=1u<<(command.midi.data[0]&15);
                         LinkEvent sent; sent.kind=LinkEventKind::Sent; sent.generation=generation;

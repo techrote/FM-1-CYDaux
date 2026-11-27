@@ -1,121 +1,182 @@
-# Try the CYD before the FM-1 arrives
+# CYDaux Companion Studio — source workflow
 
-Run `python simulator/run.py` from the repository, or double-click
-`Open-Simulator.cmd` in a Windows simulator package. The launcher opens
-`http://127.0.0.1:8781/` in your browser. It needs Python 3.10 or later and uses
-only Python's standard library.
+The studio connects the **same C++ controller, renderer, touchscreen hit testing,
+profile registry and session protocol** used by the CYD firmware to actual
+source-pinned portable ZaaggenZ and Xenoresonator engines. The browser displays
+the native 320×240 framebuffer and plays native-generated PCM. It contains no
+second implementation of the instrument controls or synthesis.
 
-A source checkout also needs `g++` or `clang++` with C++17 support for the first
-build. A simulator package that includes `fm1-simulator.exe` beside `run.py`
-does not need a compiler. The launcher also recognises binaries in `build/`.
-Use `--binary PATH` for a different executable, `--port 8782` to change the
-local port, or `--no-open` to leave browser opening to you.
+For the downloadable Windows/Linux package, follow
+[the package quickstart](PACKAGE-README.md). The Windows package's
+`CYDaux-Evaluator.exe` includes its Python runtime; the Linux launcher requires
+Python 3.10+.
 
-The simulator runs the **same C++ controller, renderer and touch hit testing**
-as the CYD firmware. The browser displays its real 320 × 240 framebuffer.
-It does not run a second JavaScript interpretation of the controls.
+## Build and run
 
-## Windows prebuilt workflow
+Use CMake 3.20+, a C11/C++17 compiler, and Python 3.10+:
 
-1. Download the `cydaux-simulator-windows-…` artifact from a successful **Build
-   and qualify** run in the repository's Actions tab, then extract the complete ZIP.
-2. Keep `run.py`, `index.html` and `Open-Simulator.cmd` together. The native
-   `fm1-simulator.exe` may sit beside them or in the package's `build` folder.
-   If the download contains only the executable, copy it into the `simulator`
-   folder of the matching source checkout.
-3. Install Python 3.10 or later if it is not already present, then double-click
-   `Open-Simulator.cmd`. The browser opens the simulator automatically.
-4. Leave the console window running while using the simulator. Press Ctrl+C
-   in that window when finished. A compiler, MIDI interface and FM-1 are not
-   needed for the prebuilt simulator.
+```console
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+python simulator/run.py
+```
 
-The package includes its own [standalone quickstart](PACKAGE-README.md) with
-paths relative to the extracted folder. Source-development commands later in
-this guide apply to the complete repository checkout.
+On Linux, `python3` may be the Python command. Source startup first finds a
+prebuilt native binary, otherwise it builds with CMake or a GCC/Clang C/C++
+compiler pair. The packaged evaluator does not need a compiler.
 
-If a browser does not open automatically, open the local address printed in
-the console. If another app already uses port 8781, run
-`python run.py --port 8782` from the extracted simulator folder.
+The server binds to loopback only, at `http://127.0.0.1:8781/`. Use `--binary
+PATH` for another native build, `--port 8782` to choose a free port, and `--no-open`
+to leave browser opening to you. The complete server uses only Python's
+standard library. It refuses foreign Host/Origin headers and bounded input
+validation excludes native-command/path injection.
 
-## Try these interactions
+Select a native instrument from the dropdown and click **Enable sound**. Hold
+Space with the display focused to play a note on any companion page. Drag Play
+controls, use the gate-enabled XY surface, edit the sixteen-step companion
+sequence and select presets. Local pattern generation remains in the common
+controller; it does not advertise instrument-side pattern persistence.
 
-- Drag a value on Play, then switch to the second bank in the header.
-- Tap the track selector to change the selected part. Mixer pages show four
-  tracks at a time and follow that selection.
-- Hold NOTE, or hold Space with the display focused. Release outside the
-  display: the held note still ends.
-- Drag the XY pad. The classic resistive CYD has a single-touch design.
-- Tap the firmware name to cycle profiles, or use the dropdown outside the
-  simulated device.
-- Open Link and SETUP to inspect the configuration screen. The simulator's
-  `CYDaux-DEMO` network is a visual example; it does not create an access point.
+## Actual engines and provenance
 
-Local demo is available without an instrument. To inspect MIDI, choose Mock
-Bluetooth or Mock Wi-Fi and Connect mock. All radio and instrument connections
-in this browser simulator are simulated. It does not emulate the musical sound.
+| Engine | Frozen source | Mode in this evaluator | Sample rate |
+|---|---|---|---|
+| ZaaggenZ-FM1 | `ac21d089e7afce6bc7adc555deb0ce90b56a39cd` | Actual native procedural core; source-image and hybrid assets excluded | 44,100 Hz mono PCM16 |
+| VIBEWARE Xenoresonator | `fa27a317bb116f2afb62a710876f96314756f814` | Actual six-mode material instrument from PR #12 | 24,000 Hz mono PCM16 |
 
-With mock returned values disabled, a control progresses from unknown to sent.
-With returned values enabled, the mock generates a MIDI response and the shared
-controller processes it. Mock replies keep the DEMO value origin, and the
-prominent MOCK LINK label remains visible. DEVICE is reserved for values
-received from a connection that is not marked as a mock.
-The XY page follows the selected track's first two parameters even when the
-second control bank is visible. It hides its cursor while either value is
-unknown, and labels each axis as queued, sent, device or demo.
+`third_party/*/UPSTREAM.json` contains every copied source hash. The original
+engine files remain byte-identical; the ZaaggenZ build supplies a local empty
+image bank and the adapter enforces `ZG_NATIVE`. Six presets select upstream
+indices 2, 7, 14, 19, 24 and 31. Index 24 is explicitly adapted to native mode.
+No image assets with unresolved reference licensing are included.
 
-## Actual display examples
+ZaaggenZ's original implementation license is retained. Xenoresonator's
+owner-provided unspecified license identity remains separate; integration into
+the owner's requested companion does not invent a third-party redistribution
+grant. See `THIRD_PARTY.md` and the retained source notices.
 
-These are pixels from the shared C++ renderer, captured by
-`render_examples.py`. They are not photographs of verified hardware.
+## Transport and timing
 
-| Play | Mixer |
-| --- | --- |
-| ![Play controls in demo mode](../docs/images/demo-play.png) | ![Four-track mixer in demo mode](../docs/images/demo-mix.png) |
+`VirtualInstrument` implements the same bounded CY1 identity/state/parameter/
+preset/note session envelope that the controller understands. Discovery checks
+the requested instrument, protocol/profile version and declared capabilities.
+A new connection uses a fresh session. Old sessions, duplicate/out-of-order
+mutations, unsupported controls and invalid ranges are rejected. Reconnection
+never replays a note or mutation. The local raw-MIDI adapter is available only
+after negotiation and is not evidence for unmodified physical firmware support.
 
-| XY pad | Connection |
-| --- | --- |
-| ![XY controls with demo origin labels](../docs/images/demo-xy.png) | ![Connection settings in demo mode](../docs/images/demo-link.png) |
+The native audio process renders at each engine's actual rate. The server
+returns a 24-byte little-endian `CYDA` version-1 header followed by PCM16:
+magic, version, sample rate, engine generation, block serial, frame count.
+Requests accept 1–4096 frames; the browser normally asks for 1024.
 
-On a mock connection, unknown XY values do not imply a centered instrument
-setting. A command changes the axis label to SENT. Mock MIDI replies are marked
-DEMO, while a real connection's returned MIDI values are marked DEVICE.
+While **Enable sound** is active, rendered samples own the controller clock.
+Control processing occurs between chunks of at most 128 samples. Wall-clock
+HTTP ticks do not also advance the sequencer. This keeps musical sequence time
+independent of the display polling rate. Web Audio converts the source rate to
+the selected host audio output rate. The browser keeps a bounded scheduling
+horizon, normally about 45–153 ms, and reports observed underruns. This is a
+software evaluation transport, not a physical latency qualification.
 
-| Unknown instrument values | Commands accepted by mock transport |
-| --- | --- |
-| ![XY pad with unknown values and hidden cursor](../docs/images/mock-xy-unknown.png) | ![XY pad with sent values](../docs/images/mock-xy-sent.png) |
+Each instrument/profile/preset/panic generation invalidates older browser
+buffers. Stop, blur, visibility and page-close handlers release performance.
+A server-side 750 ms audio-consumption lease stops abandoned playback and
+panics even if the browser cannot send a final release. The engine reply queue
+has eight entries and never allocates or waits for a consumer in the audio
+render path. The audio render method refuses requests beyond its fixed buffer.
 
-## Script the native simulator
+Telemetry is actual native state. ZaaggenZ reports the five rendered role peaks
+and output peak; Xenoresonator reports six modal `|re|+|im|` proxies. Separate
+output amplitude uses actual rendered PCM. Maxima are retained between
+successfully queued state replies so a short transient is visible at the
+controller's 100 ms state cadence. There is no fabricated animation data or
+claim of physical-device telemetry.
 
-The executable accepts one command per line and returns one JSON object per
-command. `--script FILE` reads a sequence without a browser. Commands include:
+## Legacy profiles and simulation labels
+
+Melodee, SLOOP, Skiff and X0X retain their previous Play/Mix/XY/Link behavior,
+mock connections, CC-return option, calibration handling and session safeguards.
+Their local demo/mock connections generate no audio. **NATIVE** identifies
+actual portable-engine readback. **DEVICE** is reserved for a non-mock device
+connection and does not by itself prove an endpoint's hardware identity.
+**SENT** records transport acceptance, rather than applied instrument state.
+
+The simulator's Link → Setup screen does not create an access point. The studio
+opens no physical BLE or MIDI interface and does not automatically connect to
+the separate LAN bridge. No native command flashes either board.
+
+## Script the actual controller and engines
+
+The executable accepts one command per line and returns one JSON state per
+command. `--script FILE` runs a saved session. For example:
 
 ```text
-profile melodee
-transport wifi
+profile zaaggenz-native
+transport native
 connect
-echo off
-down 60 80
-move 120 80
-up 120 80
-page mix
-frame mixer.ppm
-state
+audio-clock on
+page play
+preset 0
+note 48 100
+parameter 0 110
+audio 4096 first-block.pcm
+note 48 0
+page xy
+frame native-xy.ppm
+panic
+audio-clock off
 quit
 ```
 
-`tick N` advances the simulated clock by N milliseconds, up to 60,000 per call.
-`rx 0xb0 0x4a 0x40` injects a complete mock MIDI message for protocol checks.
-`cancel` releases captured input. `frame FILE.ppm` renders the shared UI as
-an RGB PPM file. No simulator command flashes the CYD or the FM-1.
+`parameter INDEX VALUE` addresses a visible bank control (index 0–3, normalized
+value 0–127); `bank` changes banks. `preset N` uses a native preset index.
+`sequence` toggles the common local pattern. `down`, `move`, `up`, `tap`, and
+`cancel` use exactly the shared C++ UI touch dispatch. `tick N` advances the
+clock by 0–60,000 ms only when the audio sample clock is inactive. `rx` injects
+MIDI for adversarial tests. `frame` and `audio` filenames can contain spaces and
+Unicode. The loopback HTTP API never exposes arbitrary file path commands.
 
-Run the UI and simulator checks using the repository's native qualification
-commands. The Python launcher/frame/HTTP tests can be run independently with
-`python -m unittest discover -s simulator -p 'test_*.py'` after the native
-sources are available. `python simulator/render_examples.py` writes screenshots
-from the native renderer into `docs/images/`.
+## Reproduce qualification
 
-With Node 18 or later installed, `node simulator/test_frontend.cjs` exercises
-the actual frontend event handlers against the local HTTP server and native
-controller. It covers final drag positions, keyboard notes, pointer cancellation
-and stale responses. This uses a small DOM shim and does not replace a visual
-check in a browser. An optional first argument selects a specific native binary.
+```console
+python -m unittest discover -s simulator -p "test_*.py" -v
+node simulator/test_frontend.cjs build/fm1-simulator
+python simulator/qualify_extracted.py dist/cydaux-simulator-linux --output build/extracted.json
+```
+
+CMake's `virtual_test` independently exercises the actual cores, distinct preset
+PCM, session spoof/stale rejection, discovery replay, sequence wrap, queue
+saturation and immediate panic. Python tests exercise actual touch-to-sound,
+state readback, ten presets, audio framing, paths with spaces/Unicode, lost
+consumption, disconnection and sample-clock ownership.
+
+The Node frontend test uses a DOM shim and is labelled accordingly. Actual
+browser execution is separate:
+
+```console
+python -m pip install playwright==1.58.0
+python simulator/qualify_browser.py --binary build/fm1-simulator --chromium /usr/bin/google-chrome --output build/browser-evidence
+```
+
+That test launches an actual headless browser, observes nonzero finite PCM
+copied into real Web Audio buffers, exercises touch/keyboard/sequence and buffer
+flush behavior, and captures desktop/mobile screenshots. It establishes browser
+software execution, not subjective listening or physical speaker output. Its
+JSON receipt records the actual browser version and scheduling counters.
+
+## CPU-emulator boundary
+
+The primary studio above is **native-engine execution**, not an FM-1 CPU
+emulator. Separately, `fm1-emu` was inspected at
+`69cb1ef46d86a2776112cc9279773ded3ffa293b`, and FM1-MHAC's raw-XIP host was
+inspected at `d820ad2408a2deb43aeb4c1e2e98696a72d3fe39` (PR #10), using emulator
+qualification pin `736aded65c8e2e9d652cf595fca248734483a877`.
+
+That host can boot qualified raw images and inject DIN/USB MIDI. Its existing
+MHAC instruments expose panel controls; the native companion endpoint is not
+automatically present in those firmwares. A real firmware-side endpoint and
+independent execution evidence are required for a CY1 emulator integration.
+Use the mission's coordinated downstream evidence for any subsequently
+qualified target endpoint. The studio includes no `.fwsc`, `.kpl`, stock image
+or physical FM-1 installer and makes no physical qualification claim.

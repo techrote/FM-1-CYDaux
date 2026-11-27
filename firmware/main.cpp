@@ -37,6 +37,7 @@ bool bootArmed=true;
 uint32_t generation=0, lastDraw=0, drawnRevision=UINT32_MAX;
 uint32_t lastTouch=0, lastContact=0, closePortalAt=0, bootHeldAt=0;
 uint32_t lastDiagnostics=0;
+uint32_t drawMicros=0, maximumDrawMicros=0, maximumLoopMicros=0;
 int lastX=0, lastY=0;
 MidiMessage deferredMessage;
 char setupSsid[24]="", setupPassword[16]="", formNonce[17]="";
@@ -77,11 +78,13 @@ private:
 void render() {
     const auto& model=controller.model();
     if (model.revision==drawnRevision || millis()-lastDraw<33) return;
+    const uint32_t started=micros();
     for (int y=0;y<kScreenHeight;y+=DisplayCanvas::rows) {
         canvas.setStrip(y); ui.render(canvas,model);
         display.pushImage(0,y,kScreenWidth,DisplayCanvas::rows,canvas.pixels());
     }
     drawnRevision=model.revision; lastDraw=millis();
+    drawMicros=micros()-started; maximumDrawMicros=std::max(maximumDrawMicros,drawMicros);
 }
 
 struct CalibrationRecord {
@@ -351,6 +354,7 @@ void pollTouch() {
 
 void setup() {
     Serial.begin(115200);
+    controller.setSessionSeed(esp_random());
     pinMode(0,INPUT_PULLUP);
     for (const int pin:{FM1_RGB_RED,FM1_RGB_GREEN,FM1_RGB_BLUE}) { pinMode(pin,OUTPUT); digitalWrite(pin,HIGH); }
     pinMode(TFT_BL,OUTPUT); digitalWrite(TFT_BL,LOW);
@@ -368,6 +372,7 @@ void setup() {
 }
 
 void loop() {
+    const uint32_t loopStarted=micros();
     if (linkAvailable) pollLinks();
     if (portalActive) portal.handleClient();
     if (closePortalSoon && millis()-closePortalAt>=700) {
@@ -404,6 +409,10 @@ void loop() {
         Serial.printf("memory heap=%u min=%u largest=%u loop_stack=%u radio_stack=%u\n",
             ESP.getFreeHeap(),ESP.getMinFreeHeap(),ESP.getMaxAllocHeap(),
             static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),radioLink.stackHeadroom());
+        Serial.printf("timing render_us=%lu max_render_us=%lu max_loop_us=%lu controller_bytes=%u ui_bytes=%u\n",
+            static_cast<unsigned long>(drawMicros),static_cast<unsigned long>(maximumDrawMicros),
+            static_cast<unsigned long>(maximumLoopMicros),static_cast<unsigned>(sizeof(controller)),
+            static_cast<unsigned>(sizeof(ui)));
     }
-    render(); delay(2);
+    render(); maximumLoopMicros=std::max<uint32_t>(maximumLoopMicros,micros()-loopStarted); delay(2);
 }

@@ -28,6 +28,8 @@ jobs:
       FM1_CYD_SIMULATOR: ${{ matrix.binary }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -46,21 +48,54 @@ jobs:
         run: python -m unittest discover -s simulator -p "test_*.py" -v
       - name: Frontend event integration
         run: node simulator/test_frontend.cjs ${{ matrix.binary }}
+      - name: Host resource and audio-control stress measurement
+        run: ./build/fm1-resource-probe${{ matrix.platform == 'windows' && '.exe' || '' }} > build/resource-measurements.json
+      - name: Real browser, native PCM and audio scheduling
+        if: matrix.platform == 'linux'
+        run: |
+          python -m pip install playwright==1.62.0
+          python simulator/qualify_browser.py --binary build/fm1-simulator --chromium /usr/bin/google-chrome --output build/browser-evidence
       - name: Flash-package integrity tests
         run: python -m unittest discover -s tests/package -v
+      - name: Build standalone Windows launcher
+        if: matrix.platform == 'windows'
+        run: |
+          python -m pip install pyinstaller==6.22.3
+          python -m PyInstaller --noconfirm --clean --onefile --name CYDaux-Evaluator --distpath build/launcher --workpath build/pyinstaller --specpath build --add-data "simulator/index.html;." --add-data "simulator/audio.js;." simulator/run.py
       - name: Package simulator
+        if: matrix.platform != 'windows'
         run: python scripts/package.py simulator --platform ${{ matrix.platform }}
+      - name: Package standalone Windows evaluator
+        if: matrix.platform == 'windows'
+        run: python scripts/package.py simulator --platform windows --launcher build/launcher/CYDaux-Evaluator.exe
+      - name: Execute freshly extracted package, spaces and Unicode path
+        run: python simulator/qualify_extracted.py dist/cydaux-simulator-${{ matrix.platform }} --output build/extracted-package.json
+      - name: Execute extracted standalone Windows launcher
+        if: matrix.platform == 'windows'
+        run: python simulator/qualify_extracted.py dist/cydaux-simulator-windows --standalone --output build/extracted-standalone.json
       - uses: actions/upload-artifact@v4
         with:
-          name: cydaux-simulator-${{ matrix.platform }}-${{ github.sha }}
+          name: cydaux-evaluator-${{ matrix.platform }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/cydaux-simulator-${{ matrix.platform }}/
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cydaux-qualification-${{ matrix.platform }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            build/extracted-*.json
+            build/resource-measurements.json
+            build/browser-evidence/
+            build/Testing/Temporary/LastTest.log
+          if-no-files-found: warn
   firmware:
     name: ESP32-2432S028R firmware
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -78,6 +113,6 @@ jobs:
         run: python dist/cydaux-esp32-2432s028r/flash.py --check
       - uses: actions/upload-artifact@v4
         with:
-          name: cydaux-esp32-2432s028r-${{ github.sha }}
+          name: cydaux-esp32-2432s028r-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/cydaux-esp32-2432s028r/
           if-no-files-found: error

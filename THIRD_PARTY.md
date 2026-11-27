@@ -1,8 +1,10 @@
 # Dependencies and interoperability sources
 
 CYDaux's original application, UI, bridge, tests and documentation are under
-[MIT](LICENSE). It does not embed an FM-1 audio engine or distribute Melodee,
-SLOOP, Skiff or X0X firmware binaries. Protocol mappings and fixtures are
+[MIT](LICENSE). The CYD firmware does not embed an FM-1 audio engine or distribute
+Melodee, SLOOP, Skiff or X0X firmware binaries. The host evaluator includes the
+source-pinned native engines listed below; their licenses remain separate.
+Protocol mappings and fixtures are
 independent interoperability implementations, audited against the immutable
 sources in [docs/upstream-sources.json](docs/upstream-sources.json).
 
@@ -30,6 +32,24 @@ The optional host MIDI backend uses [Mido](https://github.com/mido/mido) and
 `bridge/requirements.txt`; these are installed on demand, not bundled with the
 native simulator. The Python simulator frontend and mock bridge use the Python
 standard library. The 5×7 screen font and UI renderer are original code.
+
+## Native evaluator instrument cores
+
+| Component | Exact source | Scope and rights |
+| --- | --- | --- |
+| ZaaggenZ procedural engine | `techrote/ZaaggenZ-FM1` at `ac21d089e7afce6bc7adc555deb0ce90b56a39cd` | Original engine code is MIT. Vendored files are byte-identical and retain upstream notices. The local adapter uses procedural `ZG_NATIVE` mode only. Owner-supplied source-image banks and hybrid/source modes are excluded. |
+| Xenoresonator | `techrote/FM-1-VIBEWARE` at `fa27a317bb116f2afb62a710876f96314756f814`, `instruments/xenoresonator` | Original owner-provided C11 instrument, integrated at the owner's request. `LicenseRef-Owner-Provided-Unspecified`; no general permissive redistribution grant is asserted. It is not relicensed by CYDaux's MIT license. |
+
+`third_party/*/UPSTREAM.json` records source locations, revisions, exact file
+hashes and local modifications. These source files and notices travel with the
+owner evaluator so the engine behavior and licensing boundary remain inspectable.
+Neither engine is linked into the ESP32 image. Neither is an emulated FM-1 CPU.
+
+The standalone Windows launcher packages Python 3.11 and PyInstaller 6.22.3.
+Python retains the PSF License and incorporated component notices. PyInstaller's
+GPL license includes its bootloader exception, permitting distribution of the
+bundled original application under its own license. The build includes the
+installed runtime license and PyInstaller license with the package.
 
 The esptool flasher is installed separately at version 4.5.1. Its source and
 license are at <https://github.com/espressif/esptool/tree/v4.5.1>.

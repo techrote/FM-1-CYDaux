@@ -17,7 +17,9 @@ from .protocol import DEFAULT_PORT, PROTOCOL_VERSION, LineDecoder, ProtocolError
 LOG = logging.getLogger("fm1cyd.bridge")
 CLIENT_TIMEOUT = 6.0
 MAX_OUTGOING_BYTES = 16 * 1024
-PROFILES = frozenset(("sloop", "skiff", "melodee", "x0x"))
+LEGACY_PROFILES = frozenset(("sloop", "skiff", "melodee", "x0x"))
+COMPANION_PROFILES = frozenset(("zaaggenz-native", "xenoresonator-native"))
+PROFILES = LEGACY_PROFILES | COMPANION_PROFILES
 
 
 @dataclass
@@ -30,6 +32,39 @@ class Session:
     authenticated: bool = False
     closing: bool = False
     channels: set[int] = field(default_factory=set)
+    companion_session: int = 0
+    companion_sequence: int = 0
+    companion_notes: bool = False
+
+    def _observe_companion(self, message: tuple[int, ...]) -> None:
+        """Track only the bounded CY1 envelope for loss-of-link emergency panic.
+
+        This does not negotiate capabilities or acknowledge a device. The
+        endpoint/controller own those checks. Unmodified Fune ignores CY1.
+        """
+        if (len(message) < 15 or message[:6] != (0xF0, 0x7D, 0x43, 0x59, 1, 0)
+                or len(message) != 15 + message[13]):
+            return
+        session = sum(message[7 + i] << (7 * i) for i in range(4))
+        sequence = message[11] | message[12] << 7
+        if not session:
+            return
+        if message[6] == 1 and message[13] == 1 and not self.companion_session:
+            # One session per transport epoch. Replayed/different discovery
+            # must not erase the latest release sequence of a sounding gate.
+            self.companion_session = session
+            self.companion_sequence = sequence
+        if session != self.companion_session:
+            return
+        delta = (sequence - self.companion_sequence) & 0x3FFF
+        if delta and delta < 0x2000:
+            self.companion_sequence = sequence
+        elif delta:
+            return
+        if message[6] == 7 and message[13] == 2 and message[15] > 0:
+            self.companion_notes = True
+        elif message[6] == 8 and message[13] == 0:
+            self.companion_notes = False
 
     def handle(self, frame: dict[str, Any]) -> list[dict[str, Any]]:
         kind = frame.get("type")
@@ -61,9 +96,11 @@ class Session:
                 profile = frame.get("id")
                 if not isinstance(profile, str) or profile not in PROFILES:
                     raise ValueError("Unknown profile")
-                self.profile = profile
+                if self.mode == "mock" and profile not in LEGACY_PROFILES:
+                    raise ValueError("Native companion profiles require an actual negotiated endpoint; mock unsupported")
                 if self.mode == "mock" and hasattr(self.endpoint, "set_profile"):
                     self.endpoint.set_profile(profile)
+                self.profile = profile
                 # No MIDI command: this is metadata, never a firmware switch.
                 return []
             if kind == "midi":
@@ -72,6 +109,7 @@ class Session:
                     raise ValueError("MIDI data must be an array")
                 message = validate_midi_bytes(data)
                 self.endpoint.send(message)
+                self._observe_companion(message)
                 # A CC-only editor session must not silence somebody else's
                 # keyboard on disconnect. Release only our note-on channels.
                 if message[0] & 0xF0 == 0x90 and message[2] > 0:
@@ -84,6 +122,18 @@ class Session:
 
     def release(self) -> None:
         """Release only channels used by this session, without storing retries."""
+        if self.companion_session and self.companion_notes:
+            sequence = (self.companion_sequence + 1) & 0x3FFF or 1
+            panic = (0xF0, 0x7D, 0x43, 0x59, 1, 0, 8,
+                     *(self.companion_session >> (7 * i) & 127 for i in range(4)),
+                     sequence & 127, sequence >> 7, 0, 0xF7)
+            try:
+                self.endpoint.send(panic)
+            except (ValueError, EndpointUnavailable):
+                pass
+        self.companion_session = 0
+        self.companion_sequence = 0
+        self.companion_notes = False
         for channel in sorted(self.channels):
             try:
                 self.endpoint.send((0xB0 | channel, 64, 0))
@@ -119,6 +169,8 @@ class BridgeServer:
     ) -> None:
         if mode not in ("mock", "midi") or profile not in PROFILES:
             raise ValueError("Unknown bridge mode or profile")
+        if mode == "mock" and profile not in LEGACY_PROFILES:
+            raise ValueError("Native companion profiles require an actual negotiated endpoint; mock unsupported")
         if not token or len(token) > 128:
             raise ValueError("Token must contain 1..128 characters")
         self.endpoint = endpoint

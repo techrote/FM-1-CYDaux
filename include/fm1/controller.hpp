@@ -1,5 +1,6 @@
 #pragma once
 #include "fm1/model.hpp"
+#include "fm1/companion.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -17,6 +18,9 @@ public:
     void setNotice(const char*);
     void setSetup(bool active, const char* ssid = nullptr, const char* password = nullptr);
     void selectProfile(std::size_t);
+    void setNativeAvailable(bool);
+    void setSessionSeed(uint32_t);
+    void setControl(std::size_t parameter, int normalized);
     bool takePlatformAction(UiAction&);
 private:
     struct Value { int16_t value = -1; ValueOrigin origin = ValueOrigin::Unknown; };
@@ -38,6 +42,10 @@ private:
     int pendingCommand_ = -1, pendingOperation_ = -1;
     bool pendingSent_ = false;
     uint32_t requestSentAt_ = 0;
+    CompanionSession companion_{};
+    PerformanceSequencer sequencer_{};
+    uint32_t sessionCounter_ = 0, lastCompanionPoll_ = 0;
+    bool companionTimeoutShown_ = false;
     bool active() const;
     void rebuild();
     void resetValues();
@@ -49,5 +57,13 @@ private:
     void discardPending();
     void releaseChannels(uint16_t mask);
     bool requestEditor(const MidiMessage&);
+    const CompanionProfile* companionProfile() const;
+    bool companionAllows(uint16_t capability) const;
+    void beginCompanion();
+    void applyCompanionState();
+    void stopSequence();
+    bool emitNote(uint8_t channel, uint8_t note, uint8_t velocity);
+    void selectPreset(int);
+    static bool sequenceOutput(void*, uint8_t, uint8_t, uint8_t);
 };
 } // namespace fm1
