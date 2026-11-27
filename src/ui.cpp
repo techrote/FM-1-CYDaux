@@ -432,8 +432,7 @@ void drawOrbitModel(Canvas& canvas,Rect rect,const UiModel& model) {
                       ring==1?theme::blue:color);
     }
   }
-  // A central gate marker responds to reported/locally tracked gate ownership;
-  // its size is a visualization of envelope, never measured oscillator phase.
+  // The central envelope marker depicts interval amplitude, never oscillator phase.
   const int core=3+env*extent/(127*6);
   if(fresh&&env>0)drawPanel(canvas,{cx-core,cy-core,2*core+1,2*core+1},color,color);
   else drawPanel(canvas,{cx-3,cy-3,7,7},theme::panelActive,theme::line);
