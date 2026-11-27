@@ -75,7 +75,11 @@ The bridge never chooses the first available device. Duplicate exact port names
 are rejected as ambiguous. If a named port disappears,
 it reports `ready:false` and checks every two seconds for **the same exact name**.
 Commands attempted while the port is unavailable produce an error and are
-discarded. They are not replayed on reconnect. On Linux, MIDI names can include
+discarded. They are not replayed on reconnect. Each USB input-port lifetime
+has a separate bounded callback queue; late callbacks from a retired port
+cannot appear as readback from a reopened port. CY1 emergency release tracking
+ignores duplicate/older sequences and malformed operation envelopes rather
+than assuming their mutations took effect. On Linux, MIDI names can include
 ALSA client numbers that change across sessions; rerun `--list` and restart with
 the new exact name if necessary.
 

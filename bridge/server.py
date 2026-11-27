@@ -45,6 +45,11 @@ class Session:
         if (len(message) < 15 or message[:6] != (0xF0, 0x7D, 0x43, 0x59, 1, 0)
                 or len(message) != 15 + message[13]):
             return
+        # Match the native CY1 codec's operation/length envelope. A malformed
+        # message forwarded to MIDI cannot consume an endpoint sequence.
+        sizes = {1: 1, 2: 6, 3: 0, 4: 23, 5: 2, 6: 1, 7: 2, 8: 0, 9: 1}
+        if sizes.get(message[6]) != message[13]:
+            return
         session = sum(message[7 + i] << (7 * i) for i in range(4))
         sequence = message[11] | message[12] << 7
         if not session:
@@ -59,7 +64,9 @@ class Session:
         delta = (sequence - self.companion_sequence) & 0x3FFF
         if delta and delta < 0x2000:
             self.companion_sequence = sequence
-        elif delta:
+        else:
+            # Duplicate mutations cannot have been accepted by the endpoint.
+            # Do not allow an equal-sequence Panic to cancel Note release duty.
             return
         if message[6] == 7 and message[13] == 2 and message[15] > 0:
             self.companion_notes = True

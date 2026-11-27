@@ -82,6 +82,33 @@ int main() {
         assert(!endpoint.receive(request(CompanionOp::Note, 7, 8, {60,100})));
     }
 
+    // Independent transport release must match the actual endpoint's serial
+    // ordering. A duplicate Panic is rejected and must not clear note duty.
+    // Exercise both real source-pinned engines and actual silence after the
+    // generated emergency Panic, not merely a tracker-only assertion.
+    for (const auto id : {"zaaggenz-native", "xenoresonator-native"}) {
+        negotiate(endpoint, id, 21);
+        CompanionReleaseTracker tracker;
+        const auto* profile = companionProfileFor(id);
+        tracker.sent(companionDiscover(profile->instrument, 21, 1));
+        const auto attack = request(CompanionOp::Note, 21, 2, {60,100});
+        assert(endpoint.receive(attack)); tracker.sent(attack);
+        drain(endpoint);
+        assert(endpoint.render(pcm.data(), pcm.size()));
+        assert(std::any_of(pcm.begin(),pcm.end(),[](int16_t s){return s!=0;}));
+        const auto duplicatePanic = request(CompanionOp::Panic, 21, 2);
+        assert(!endpoint.receive(duplicatePanic)); tracker.sent(duplicatePanic);
+        assert(endpoint.snapshot().gate && tracker.needsRelease());
+        const auto emergency = tracker.panicMessage();
+        assert(emergency.size && endpoint.receive(emergency)); tracker.sent(emergency);
+        assert(!tracker.needsRelease() && !endpoint.snapshot().gate);
+        const auto duplicateNote = request(CompanionOp::Note, 21, 3, {60,100});
+        assert(!endpoint.receive(duplicateNote)); tracker.sent(duplicateNote);
+        assert(!tracker.needsRelease());
+        assert(endpoint.render(pcm.data(),pcm.size()));
+        assert(std::all_of(pcm.begin(),pcm.end(),[](int16_t s){return s==0;}));
+    }
+
     // Every native preset independently yields a different actual waveform.
     for (const auto id : {"zaaggenz-native", "xenoresonator-native"}) {
         const auto* profile = companionProfileFor(id);

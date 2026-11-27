@@ -135,16 +135,24 @@ class UsbMidi:
         self._next_probe = 0.0
         self._closed = False
 
-    def _callback(self, message: Any) -> None:
+    def _callback(self, message: Any, incoming: Queue[tuple[int, ...]]) -> None:
+        # Each input-port lifetime owns its queue. Even if an old driver
+        # callback resumes after disconnect/reopen, its bytes cannot enter the
+        # new queue. The identity check is an optimization; queue separation
+        # also covers a callback paused between the check and put_nowait.
+        if incoming is not self._incoming:
+            return
         try:
             data = validate_midi_bytes(message.bytes())
-            self._incoming.put_nowait(data)
+            incoming.put_nowait(data)
         except (ValueError, TypeError, Full):
             self.dropped_input += 1
 
     def _disconnect(self, reason: str) -> None:
         self.connected = False
         self.detail = reason
+        # Retire ingress before closing the driver; callbacks may still run.
+        self._incoming = Queue(MAX_INPUT_MESSAGES)
         for port in (self._input, self._output):
             if port is not None:
                 try:
@@ -153,7 +161,6 @@ class UsbMidi:
                     pass
         self._input = None
         self._output = None
-        self.receive()
 
     def tick(self, now: float) -> None:
         if self._closed or now < self._next_probe:
@@ -176,7 +183,9 @@ class UsbMidi:
                 return
             self._output = self._mido.open_output(self.output_name)
             if self.input_name:
-                self._input = self._mido.open_input(self.input_name, callback=self._callback)
+                incoming = self._incoming
+                self._input = self._mido.open_input(
+                    self.input_name, callback=lambda message: self._callback(message, incoming))
             self.connected = True
             self.detail = "selected USB MIDI ports connected"
         except Exception as error:
