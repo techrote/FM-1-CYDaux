@@ -18,7 +18,7 @@ LOG = logging.getLogger("fm1cyd.bridge")
 CLIENT_TIMEOUT = 6.0
 MAX_OUTGOING_BYTES = 16 * 1024
 LEGACY_PROFILES = frozenset(("sloop", "skiff", "melodee", "x0x"))
-COMPANION_PROFILES = frozenset(("zaaggenz-native", "xenoresonator-native"))
+COMPANION_PROFILES = frozenset(("zaaggenz-native", "xenoresonator-native", "grimoire-native"))
 PROFILES = LEGACY_PROFILES | COMPANION_PROFILES
 
 

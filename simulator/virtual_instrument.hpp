@@ -3,6 +3,7 @@
 #include "zg/engine.h"
 extern "C" {
 #include "xeno.h"
+#include "orbit.h"
 }
 #include <array>
 #include <cstddef>
@@ -38,6 +39,7 @@ private:
     const CompanionProfile* profile_ = nullptr;
     zg_engine zaag_{};
     Xeno xeno_{};
+    Orbit orbit_{};
     std::array<MidiMessage, kReplyCapacity> replies_{};
     std::array<uint8_t, kCompanionMeters> meters_{};
     std::array<int32_t, ZG_BLOCK * ZG_STEM_COUNT> stems_{};

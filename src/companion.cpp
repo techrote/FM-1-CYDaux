@@ -9,6 +9,7 @@ constexpr uint16_t kCapabilities = CompanionNotes | CompanionParameters | Compan
                                   CompanionXY | CompanionTelemetry;
 const char* const kCharacters[] = {"Bloom Bark", "Formant Snarl", "Upper Chop", "Split Maul", "Crushed Teeth", "Harmonic Rip"};
 const char* const kZaagPresets[] = {"Native Bark", "Throat Walk", "Flea Circuit", "Iron Bellows", "Crushed Teeth Native", "Wire Lattice"};
+const char* const kOrbitRites[] = {"Amber", "Iron", "Abyss"};
 const char* const kMaterials[] = {"Ceramic", "Woodglass", "Alien metal", "Membrane"};
 constexpr CompanionParameter continuous(const char* id, const char* label, uint8_t cc, int16_t initial) {
     return {id, label, ParameterKind::Continuous, 0, 127, initial, cc, "", nullptr, 0, true};
@@ -30,6 +31,10 @@ const CompanionProfile kProfiles[] = {
        {"material", "Material", ParameterKind::Enumeration, 0, 3, 0, 19, "", kMaterials, 4, true},
        unused(), unused(), unused(), unused()}},
      0x0f, kMaterials, 4, 36, 84, "fa27a317bb116f2afb62a710876f96314756f814", false},
+    {CompanionInstrument::Grimoire, "grimoire-native", "1.0", 1, 0, kCapabilities,
+     {{continuous("pitch_x", "Pitch X", 16, 48), continuous("material_y", "Material Y", 17, 70),
+       unused(), unused(), unused(), unused(), unused(), unused()}},
+     0x03, kOrbitRites, 3, 36, 59, "ca1b83a5f6c8f1e87dea671f93f7e2a6d3bc432f", false},
 };
 bool textValid(const char* s, std::size_t maximum, bool allowEmpty = false) {
     if (!s || (!allowEmpty && !s[0])) return false;

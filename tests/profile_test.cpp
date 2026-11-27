@@ -43,7 +43,7 @@ void checkLiveRejected(const Bytes& bytes, const char* message) {
           "rejected LIVE must not partially mutate state");
 }
 void testProfiles() {
-    check(fm1::profileCount() == 6, "four legacy profiles plus two negotiated native endpoints");
+    check(fm1::profileCount() == 7, "four legacy profiles plus three negotiated native endpoints");
     check(fm1::profileIndex(nullptr) == -1 && fm1::profileIndex("unknown") == -1,
           "unknown profile id");
     const uint8_t expected[4][8] = {

@@ -356,6 +356,7 @@ void drawMix(Canvas& canvas,const UiModel& model) {
     if(model.telemetryAvailable&&count){
       for(int i=0;i<count;++i){
         char label[16];std::snprintf(label,sizeof(label),"%d",i+1);
+        if (model.profileIndex==profileIndex("grimoire-native")) label[0]=i==0?'E':'A';
         const int top=72+i*19;
         drawText(canvas,18,top,label,theme::muted,1,1);
         fill(canvas,35,top,147,7,theme::line);
@@ -375,7 +376,8 @@ void drawMix(Canvas& canvas,const UiModel& model) {
     if(model.telemetryAvailable)
       fill(canvas,238,163,std::max(1,clampMidi(model.outputPeak)*70/127),6,originColor(model.telemetryOrigin));
     drawText(canvas,238,179,originName(model.telemetryOrigin),originColor(model.telemetryOrigin),1,10);
-    drawText(canvas,10,198,model.telemetryAvailable?"SQRT STATE PEAKS / RAW VALUES / PCM LINEAR":"NO TELEMETRY CLAIM WITHOUT FRESH STATE",theme::muted,1,50);
+    drawText(canvas,10,198,model.telemetryAvailable?(model.profileIndex==profileIndex("grimoire-native")?
+        "E: ENVELOPE / A: ENERGY / PCM LINEAR":"SQRT STATE PEAKS / RAW VALUES / PCM LINEAR"):"NO TELEMETRY CLAIM WITHOUT FRESH STATE",theme::muted,1,50);
     return;
   }
   const int first=(model.trackIndex/4)*4;

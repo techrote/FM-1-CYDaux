@@ -40,10 +40,12 @@ standard library. The 5×7 screen font and UI renderer are original code.
 | ZaaggenZ procedural engine | `techrote/ZaaggenZ-FM1` at `ac21d089e7afce6bc7adc555deb0ce90b56a39cd` | Original engine code is MIT. Vendored files are byte-identical and retain upstream notices. The local adapter uses procedural `ZG_NATIVE` mode only. Owner-supplied source-image banks and hybrid/source modes are excluded. |
 | Xenoresonator | `techrote/FM-1-VIBEWARE` at `fa27a317bb116f2afb62a710876f96314756f814`, `instruments/xenoresonator` | Original owner-provided C11 instrument, integrated at the owner's request. `LicenseRef-Owner-Provided-Unspecified`; no general permissive redistribution grant is asserted. It is not relicensed by CYDaux's MIT license. |
 
+| Grimoire Orbit Gate | `techrote/FM-1-VIBEWARE` at `ca1b83a5f6c8f1e87dea671f93f7e2a6d3bc432f`, `instruments/grimoire` | Original owner-provided portable core; owner-authorized integration only. LicenseRef-Owner-Provided-Unspecified; no general redistribution grant asserted. |
+
 `third_party/*/UPSTREAM.json` records source locations, revisions, exact file
 hashes and local modifications. These source files and notices travel with the
 owner evaluator so the engine behavior and licensing boundary remain inspectable.
-Neither engine is linked into the ESP32 image. Neither is an emulated FM-1 CPU.
+No native engine is linked into the ESP32 image. None is an emulated FM-1 CPU.
 
 The standalone Windows launcher packages Python 3.11 and PyInstaller 6.22.3.
 Python retains the PSF License and incorporated component notices. PyInstaller's

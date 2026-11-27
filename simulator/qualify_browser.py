@@ -45,8 +45,8 @@ def exercise_browser(playwright, args, base, receipt):
             return original.call(this,source,...args);};""")
         receipt["stage"] = "opening evaluator"
         page.goto(base)
-        page.wait_for_function("state && state.profiles.length>=6")
-        for instrument in ("xenoresonator-native", "zaaggenz-native"):
+        page.wait_for_function("state && state.profiles.length>=7")
+        for instrument in ("xenoresonator-native", "zaaggenz-native", "grimoire-native"):
             receipt["stage"] = instrument + ": discovery"
             page.select_option("#profile", instrument)
             page.wait_for_function(
