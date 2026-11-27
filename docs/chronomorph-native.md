@@ -1,0 +1,7 @@
+# Chronomorph native adapter — first slice (Draft/HOLD)
+
+Pinned original core/profile from VIBEWARE #14 at `7fa9a16b55b321a1a8b46e174ed15e927aeaece6`; upstream native CI 46081835047 passed. Owner-authorized local integration, no general redistribution grant asserted. Not relicensed by CYDaux MIT. No changes to engine or wire format.
+
+The host-only `ChronoAdapter` exposes actual BPM, signed warp, variation, all three full 16-bit masks and lengths, start/stop/reset, atomic scene updates, and exact lane step, cycle, clock, ticks and hits. Scene application copies bounded core state, validates all edits before committing, preserves clocks, and rejects invalid changes atomically. Disconnect is immediate stop/mute. Actual core PCM; max 4096 frames per call. No physical endpoint, verified MIDI, CY1 profile, companion UI or device telemetry is claimed yet. No native engine linked into ESP32 firmware. The adapter is a separate native test target, not advertised in the current evaluator until shared controller integration is complete.
+
+Regression covers split-block PCM/state equality, real temporal divergence, full-width masks, invalid edit rollback, preserved clocks, distinct control-dependent audio and exact silence after disconnect. New CI pending. Next: coordinate GEN and PLATFORM on shared native profile and pattern editing with explicit transport/release semantics; do not squeeze a 16-bit mask into a 7-bit parameter or advertise unsupported Pattern capability.
