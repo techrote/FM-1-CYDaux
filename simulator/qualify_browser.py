@@ -151,6 +151,40 @@ def exercise_browser(playwright, args, base, receipt):
             "high_bit_edit":True,"native_clock":True,"stop_flush":True})
         save_receipt(args.output, receipt)
 
+        receipt["stage"] = "ecophon-native: actual habitat editor"
+        page.click("#ecoMode")
+        page.wait_for_function("state.eco.active && !state.eco.running && !state.chrono.active")
+        box = page.locator("#screen").bounding_box()
+        chrono_tap(153, 158)
+        page.wait_for_function("state.eco.fertility===255 && state.eco.pressure===255")
+        chrono_tap(311, 120)
+        page.wait_for_function("state.eco.sharing===255")
+        chrono_tap(45, 193)
+        page.wait_for_function("state.eco.fertility===180 && state.eco.sharing===200")
+        page.click("#audioStart")
+        page.wait_for_function("audioPlayer.running && state.audio.clockRunning")
+        before = page.evaluate("window.__pcm.nonzero")
+        chrono_tap(45, 220)
+        page.wait_for_function("state.eco.running && state.eco.ticks>3")
+        page.wait_for_function("n => window.__pcm.nonzero>n", arg=before)
+        stats = page.evaluate("""({source:state.audio, ecology:state.eco,
+            nodes:audioPlayer.nodes.size, ahead:audioPlayer.nextTime-audioPlayer.context.currentTime,
+            blocks:audioPlayer.blocks, underruns:audioPlayer.underruns, pcm:window.__pcm})""")
+        if stats["nodes"]>12 or stats["ahead"]>0.25 or not stats["pcm"]["finite"]:
+            raise RuntimeError("Ecophon Web Audio exceeded bounds")
+        if len(stats["ecology"]["agents"])!=8 or len(stats["ecology"]["resources"])!=4:
+            raise RuntimeError("Ecophon telemetry dimensions changed")
+        page.screenshot(path=str(args.output / "ecophon-native-browser.png"), full_page=True)
+        page.click("#panic")
+        page.wait_for_function("!state.eco.running")
+        page.click("#audioStart")
+        page.wait_for_function("!audioPlayer.running && !state.audio.clockRunning && audioPlayer.nodes.size===0")
+        page.click("#ecoMode")
+        page.wait_for_function("!state.eco.active")
+        receipt["instruments"].append({"id":"ecophon-native","software_web_audio":stats,
+            "full_width_xy":True,"local_ecology":True,"stop_flush":True})
+        save_receipt(args.output, receipt)
+
         receipt["stage"] = "responsive browser shell"
         # The responsive shell still hosts the exact 320x240 framebuffer.
         page.set_viewport_size({"width": 390, "height": 844})
