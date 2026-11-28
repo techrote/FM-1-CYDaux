@@ -62,9 +62,14 @@ class CompanionBridgeTests(unittest.TestCase):
         endpoint = MockMidi(echo=False)
         session = Session(endpoint, "token", "midi", "zaaggenz-native", authenticated=True)
         messages = [cy(1, 99, 0, (1,)), cy(7, 99, 1, (60, 100)),
-                    cy(8, 99, 1), cy(5, 99, 4000, (0,)), cy(127, 99, 5000)]
+                    cy(8, 99, 1)]
         for message in messages:
             self.assertEqual(session.handle({"type": "midi", "data": list(message)}), [])
+        for malformed in (cy(5, 99, 4000, (0,)), cy(127, 99, 5000)):
+            self.assertEqual(session.handle({"type": "midi", "data": list(malformed)}),
+                             [{"type": "error", "message": "Invalid CY1 operation or payload size"}])
+            self.assertTrue(session.companion_notes)
+            self.assertEqual(session.companion_sequence, 1)
         session.release()
         self.assertEqual(list(endpoint.sent), messages + [cy(8, 99, 2)])
 
