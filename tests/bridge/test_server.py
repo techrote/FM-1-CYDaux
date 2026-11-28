@@ -293,6 +293,31 @@ class CompanionEpochSocketTests(unittest.TestCase):
         self.assertEqual(self.endpoint.sent[-1], cy(8, 101, 2))
         self.assertNotIn(stale, self.endpoint.attempted)
 
+    def test_discovery_retry_cannot_move_emergency_release_sequence(self):
+        self.hello()
+        self.play(99)
+        # Endpoint accepts repeated Identity requests without moving its
+        # mutation sequence. The bridge must retain the accepted note sequence.
+        self.send_cy(cy(1, 99, 8192, (2,)))
+        self.send_cy(cy(1, 100, 8192, (3,)))
+        self.send_cy(cy(8, 99, 1))  # duplicate panic must not clear release duty
+        self.barrier()
+        self.peer.close()
+        for _ in range(10):
+            self.server.step(0.001)
+        self.assertEqual(self.endpoint.sent[-1], cy(8, 99, 2))
+        self.assertIsNone(self.server.client)
+
+    def test_discovery_retry_preserves_release_after_sequence_wrap(self):
+        self.hello()
+        self.send_cy(cy(1, 99, 16382, (2,)))
+        self.send_cy(cy(7, 99, 16383, (60, 100)))
+        self.send_cy(cy(1, 99, 8190, (2,)))
+        self.barrier()
+        self.clock.value += 6.0
+        self.assertIsNone(self.peer.next())
+        self.assertEqual(self.endpoint.sent[-1], cy(8, 99, 1))
+
     def test_initial_wait_is_not_a_lost_epoch(self):
         self.endpoint.connected = False
         self.endpoint.detail = "waiting for USB"
