@@ -4,7 +4,9 @@ This implementation extends PR #1 at
 `6540bac817c78618f2d3a666e70d684b7f6216a9`. The legacy controller is retained;
 the new profile/session layer and musical pages use the same renderer and touch
 capture on ESP32 and desktop. The native evaluator controls actual portable
-ZaaggenZ, Xenoresonator and Grimoire engines and plays their PCM.
+ZaaggenZ, Xenoresonator and Grimoire engines and plays their PCM. Chronomorph
+uses the same desktop renderer primitives, HTTP process and PCM lifecycle in a
+separate native-only editor, not an ESP32 or CY1 profile.
 
 ## Implemented architecture
 
@@ -35,6 +37,8 @@ full-frame renderer are compared byte for byte in `strip_renderer_test`.
 | `xenoresonator-native` | CY1 endpoint around actual VIBEWARE Xenoresonator | Excitation, damping, coupling, four materials/presets, notes, six modal-state peaks and PCM peak | Native host execution; separate target integration must carry its own emulator/hardware receipt |
 
 | `grimoire-native` | CY1 endpoint around actual Orbit Gate core | Pitch/material XY, three presets, two envelope/energy peaks, PCM and labelled local orbit model | Native host execution only; no FM-1 CY1 endpoint or physical proof |
+
+| Chronomorph native editor | Local bounded adapter in the shared simulator | Three full 16-bit patterns, lane lengths, clocks, tempo/warp/variation, scenes, start/stop/reset | Native host only; no CY1, MIDI or FM-1 pattern transport claimed |
 
 Tier 1 is the verified MIDI subset of each legacy profile. Tier 2 is actual
 negotiated identity, parameter/preset mutations and state reconciliation in the

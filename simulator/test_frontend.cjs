@@ -48,7 +48,7 @@ async function main() {
   });
 
   const ids = ["screen", "profile", "transport", "description", "version", "setupHint",
-    "notice", "connect", "disconnect", "counts", "values", "midi", "echo", "error", "audioStart", "audioStatus", "volume", "panic"];
+    "notice", "connect", "disconnect", "counts", "values", "midi", "echo", "error", "audioStart", "audioStatus", "volume", "panic", "chronoMode"];
   const elements = Object.fromEntries(ids.map(id => [id,
     new Element(id === "screen" ? "CANVAS" : "DIV")]));
   elements.transport.options = [{}, {}, {}, {}];
@@ -104,6 +104,14 @@ async function main() {
   await run('update({...state,revision:state.revision-1,profile:"invalid"})');
   assert.equal((await run("state")).revision, revision);
   assert.equal(elements.error.textContent, "");
+  await elements.chronoMode.listeners.click();
+  assert.equal((await run("state")).chrono.active, true);
+  elements.screen.listeners.pointerdown(event(15, 48));
+  elements.screen.listeners.pointerup(event(15, 48));
+  await run("queue");
+  assert.equal((await run("state")).chrono.lanes[0].mask, 0x48);
+  await elements.chronoMode.listeners.click();
+  assert.equal((await run("state")).chrono.active, false);
   console.log("Frontend events: PASS (HTTP/native controller, final drag, keyboard note, pointer cancellation, stale state)");
 }
 

@@ -18,6 +18,8 @@ import time
 from urllib.request import Request, urlopen
 import zipfile
 
+from package_contract import require_audio_rates, require_frame
+
 
 def verify_hashes(directory: Path) -> dict:
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
@@ -112,8 +114,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             if peak<=100:
                 raise RuntimeError("Extracted engine produced no meaningful audio")
             frame=get("/api/frame.png")
-            if not frame.startswith(b"\x89PNG\r\n\x1a\n"):
-                raise RuntimeError("Extracted renderer failed")
+            require_frame(frame, instrument)
             control("panic")
             quiet=post("/api/audio",{"frames":1024})[24:]
             if quiet!=bytes(2048):
@@ -124,6 +125,38 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
                 "frame_sha256":hashlib.sha256(frame).hexdigest(),
                 "source_revision":state["audio"]["sourceRevision"],
                 "handshake":True,"touch_to_sound":True,"panic_silence":True})
+        state=control("chrono","on")
+        if not state["chrono"]["active"] or state["chrono"]["origin"]!="native-engine":
+            raise RuntimeError("Extracted Chronomorph editor unavailable")
+        def tap(x,y):
+            return json.loads(post("/api/touch",{"phase":"tap","x":x,"y":y}))
+        for _ in range(9):
+            tap(290,30)
+        edited=tap(301,48)
+        if edited["chrono"]["lanes"][0]["length"]!=16 or not edited["chrono"]["lanes"][0]["mask"]&0x8000:
+            raise RuntimeError("Extracted Chronomorph pattern edit failed")
+        control("audio-clock","on")
+        state=tap(45,220)
+        if not state["chrono"]["playing"]:
+            raise RuntimeError("Extracted Chronomorph start failed")
+        block=post("/api/audio",{"frames":4096})
+        magic,version,rate,generation,serial,frames=struct.unpack("<4sIIIII",block[:24])
+        pcm=struct.unpack("<4096h",block[24:])
+        peak=max(abs(v) for v in pcm)
+        if (magic,version,rate,frames)!=(b"CYDA",1,24000,4096) or peak<=100:
+            raise RuntimeError("Extracted Chronomorph PCM failed")
+        frame=get("/api/frame.png")
+        require_frame(frame, "chronomorph-native")
+        control("panic")
+        if post("/api/audio",{"frames":1024})[24:]!=bytes(2048):
+            raise RuntimeError("Extracted Chronomorph panic failed")
+        control("audio-clock","off")
+        control("chrono","off")
+        receipt["instruments"].append({"id":"chronomorph-native","rate":rate,"peak":peak,
+            "pcm_sha256":hashlib.sha256(block[24:]).hexdigest(),
+            "frame_sha256":hashlib.sha256(frame).hexdigest(),
+            "source_revision":state["audio"]["sourceRevision"],"high_bit_edit":True,
+            "touch_to_sound":True,"panic_silence":True,"native_only":True})
         receipt["result"]="PASS"
         return receipt
     finally:
@@ -166,6 +199,7 @@ def main():
             (directory/"fm1-simulator").chmod(0o755)
         manifest=verify_hashes(directory)
         receipt=evaluate(directory,args.standalone)
+        require_audio_rates(manifest, receipt["instruments"])
         receipt["source_commit"]=manifest["source_commit"]
         receipt["archive_sha256"]=hashlib.sha256(archive.read_bytes()).hexdigest()
     encoded=json.dumps(receipt,indent=2)+"\n"
