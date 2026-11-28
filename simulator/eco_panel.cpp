@@ -4,6 +4,7 @@
 
 namespace fm1 {
 namespace {
+constexpr Rect arc{164,1,76,16};
 constexpr Rect xy{8,100,146,59}, sharing{164,112,148,20}, freeze{164,138,148,21};
 constexpr Rect presets[4]={{8,182,74,22},{85,182,74,22},{162,182,74,22},{239,182,73,22}};
 constexpr Rect play{8,209,95,24},stop{111,209,95,24},reset{214,209,98,24};
@@ -19,6 +20,7 @@ int scale(unsigned n,unsigned cap,int w){
 }
 }
 int EcoPanel::hit(int x,int y){
+    if(arc.contains(x,y))return 10;
     if(xy.contains(x,y))return 0;
     if(sharing.contains(x,y))return 1;
     if(freeze.contains(x,y))return 2;
@@ -30,7 +32,11 @@ int EcoPanel::hit(int x,int y){
 }
 EcoPanel::Change EcoPanel::touch(TouchPhase phase,int x,int y,EcoAdapter& a,bool lease){
     if(phase==TouchPhase::Cancel){cancel();return Change::None;}
-    if(phase==TouchPhase::Down){capture_=hit(x,y);return Change::None;}
+    if(phase==TouchPhase::Down){
+        capture_=hit(x,y);
+        if(capture_>=0&&capture_<3&&a.snapshot().arcActive){a.cancelArc();return Change::Edit;}
+        return Change::None;
+    }
     const int target=capture_;
     if(phase==TouchPhase::Up)cancel();
     if(target<0)return Change::None;
@@ -42,6 +48,10 @@ EcoPanel::Change EcoPanel::touch(TouchPhase phase,int x,int y,EcoAdapter& a,bool
         return Change::Edit;
     }
     if(phase!=TouchPhase::Up||target!=hit(x,y))return Change::None;
+    if(target==10){
+        if(!lease||!a.startArc())return Change::None;
+        return Change::Edit;
+    }
     if(target==2){a.controls(v.fertility,v.sharing,v.pressure,!v.frozen);return Change::Edit;}
     if(target<7){a.reset(1,static_cast<unsigned>(target-3));return Change::Flush;}
     if(target==7){if(!lease)return Change::None;a.start();return Change::Flush;}
@@ -53,6 +63,9 @@ void EcoPanel::render(Canvas& c,const EcoView& v)const{
     drawText(c,8,5,"ECOPHON / LOCAL NATIVE",theme::accent);
     drawText(c,245,5,v.running?"RUN":"STOP",v.running?theme::accent:theme::amber);
     char label[64];
+    std::snprintf(label,sizeof label,v.arcActive?"ARC %u":v.arcBlock==240?"ARC DONE":"PLAY ARC",unsigned(v.arcBlock));
+    drawPanel(c,arc,v.arcActive?theme::panelActive:theme::panel,v.arcActive?theme::accent:theme::line);
+    drawText(c,arc.x+3,arc.y+3,label,v.running&&!v.frozen?theme::accent:theme::muted,1,11);
     unsigned alive=0;
     for(unsigned p=0;p<ECO_PATCHES;++p){
         const Rect r{8+77*static_cast<int>(p),19,73,65};

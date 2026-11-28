@@ -17,6 +17,8 @@ struct EcoView {
     uint32_t ticks, births, deaths, gifts, moves, consumed;
     uint8_t fertility, sharing, pressure, regime, preset;
     bool frozen, running;
+    uint16_t arcBlock; // completed 100 ms blocks, 0..240
+    bool arcActive;
     std::array<uint16_t,ECO_PATCHES> resource;
     std::array<EcoAgentView,ECO_AGENTS> agents;
 };
@@ -29,6 +31,9 @@ public:
     bool controls(unsigned fertility,unsigned sharing,unsigned pressure,unsigned frozen);
     // XY only changes fertility and pressure; retain sharing and freeze.
     bool xy(unsigned fertility,unsigned pressure);
+    // Native local performance score; no endpoint or wire fields.
+    bool startArc();
+    void cancelArc();
     void start();
     void stop();
     void disconnect(){stop();}
@@ -38,5 +43,9 @@ private:
     Eco state_{};
     uint8_t preset_=0;
     bool running_=false;
+    bool arcActive_=false;
+    unsigned arcBlock_=0, arcRemaining_=0;
+    std::array<unsigned,3> arcFrom_{};
+    void beginArcBlock();
 };
 }

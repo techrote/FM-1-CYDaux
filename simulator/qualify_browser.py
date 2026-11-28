@@ -174,15 +174,21 @@ def exercise_browser(playwright, args, base, receipt):
             raise RuntimeError("Ecophon Web Audio exceeded bounds")
         if len(stats["ecology"]["agents"])!=8 or len(stats["ecology"]["resources"])!=4:
             raise RuntimeError("Ecophon telemetry dimensions changed")
+        chrono_tap(195, 9)
+        page.wait_for_function("state.eco.arcActive && state.eco.arcBlock>=2")
+        chrono_tap(80, 127)
+        page.wait_for_function("!state.eco.arcActive && state.eco.arcBlock===0")
+        chrono_tap(195, 9)
+        page.wait_for_function("state.eco.arcActive")
         page.screenshot(path=str(args.output / "ecophon-native-browser.png"), full_page=True)
         page.click("#panic")
-        page.wait_for_function("!state.eco.running")
+        page.wait_for_function("!state.eco.running && !state.eco.arcActive && state.eco.arcBlock===0")
         page.click("#audioStart")
         page.wait_for_function("!audioPlayer.running && !state.audio.clockRunning && audioPlayer.nodes.size===0")
         page.click("#ecoMode")
         page.wait_for_function("!state.eco.active")
         receipt["instruments"].append({"id":"ecophon-native","software_web_audio":stats,
-            "full_width_xy":True,"local_ecology":True,"stop_flush":True})
+            "full_width_xy":True,"local_ecology":True,"stop_flush":True,"arc_manual_takeover":True})
         save_receipt(args.output, receipt)
 
         receipt["stage"] = "responsive browser shell"
