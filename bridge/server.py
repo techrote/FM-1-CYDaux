@@ -60,11 +60,14 @@ class Session:
         sequence = message[11] | message[12] << 7
         if not session:
             return
-        if message[6] == 1 and message[13] == 1 and not self.companion_session:
-            # One session per transport epoch. Replayed/different discovery
-            # must not erase the latest release sequence of a sounding gate.
-            self.companion_session = session
-            self.companion_sequence = sequence
+        if message[6] == 1:
+            # Discovery retries return Identity but do not advance the active
+            # endpoint's mutation sequence. Never let a retry move the bridge's
+            # emergency-release sequence outside the endpoint's forward window.
+            if not self.companion_session:
+                self.companion_session = session
+                self.companion_sequence = sequence
+            return
         if session != self.companion_session:
             return
         delta = (sequence - self.companion_sequence) & 0x3FFF
