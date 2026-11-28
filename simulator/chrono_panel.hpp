@@ -12,6 +12,8 @@ public:
     void cancel() { captured_=-1; }
 private:
     int captured_=-1;
-    static int hit(int x,int y,const ChronoView&);
+    bool macros_=false;
+    int hit(int x,int y,const ChronoView&) const;
+    Change slide(int x,ChronoAdapter&);
 };
 }

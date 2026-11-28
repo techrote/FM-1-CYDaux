@@ -125,8 +125,15 @@ the local sequence and captured gestures. Explicit **Refresh** then requests a
 full transport reconnect. The old connection's independent note-release guard
 runs before it is reset, and only the new connection starts a fresh CY1 session.
 This maintains one wire session per transport epoch; a replayed or competing
-Discover cannot steal the emergency-release responsibility. No note or parameter
-mutation is replayed during recovery.
+Discover cannot steal the emergency-release responsibility. The authenticated
+TCP bridge requires a nonzero CY1 Discover before forwarding current-version
+mutations, then refuses a different session (including Discover) until the
+socket reconnects. This prevents a delayed forward Note from reaching a
+still-live retired firmware lease before the new socket owns release. Same-session
+discovery retries, legacy MIDI and other SysEx versions remain unchanged.
+This is a connection-lifecycle guard, not device authentication or protection
+against a client deliberately reusing an old session identifier.
+No note or parameter mutation is replayed during recovery.
 
 An authenticated enhanced-profile TCP connection is also retired on USB
 readiness loss, including a send failure within a batch of TCP frames. The

@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 import zipfile
 
 from package_contract import require_audio_rates, require_frame
+from picker_witness import picker_witness
 
 
 def verify_hashes(directory: Path) -> dict:
@@ -147,6 +148,22 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             raise RuntimeError("Extracted Chronomorph PCM failed")
         frame=get("/api/frame.png")
         require_frame(frame, "chronomorph-native")
+        tap(180,10)
+        tap(311,55)
+        tap(8,110)
+        macro=tap(311,165)
+        if (macro["chrono"]["bpm"],macro["chrono"]["warp"],macro["chrono"]["variation"])!=(220,-60,100) or not macro["chrono"]["playing"]:
+            raise RuntimeError("Extracted Chronomorph normalized macro failed")
+        macro_frame=get("/api/frame.png")
+        require_frame(macro_frame,"chronomorph-native macros")
+        if macro_frame==frame:
+            raise RuntimeError("Extracted Chronomorph macro page unchanged")
+        macro_block=post("/api/audio",{"frames":4096})
+        if not any(struct.unpack("<4096h",macro_block[24:])):
+            raise RuntimeError("Extracted Chronomorph macro PCM silent")
+        pattern=tap(180,10)
+        if pattern["chrono"]["lanes"][0]["length"]!=16 or not pattern["chrono"]["lanes"][0]["mask"]&0x8000:
+            raise RuntimeError("Extracted Chronomorph macro erased pattern")
         control("panic")
         if post("/api/audio",{"frames":1024})[24:]!=bytes(2048):
             raise RuntimeError("Extracted Chronomorph panic failed")
@@ -156,6 +173,8 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             "pcm_sha256":hashlib.sha256(block[24:]).hexdigest(),
             "frame_sha256":hashlib.sha256(frame).hexdigest(),
             "source_revision":state["audio"]["sourceRevision"],"high_bit_edit":True,
+            "normalized_macro":True,"macro_frame_sha256":hashlib.sha256(macro_frame).hexdigest(),
+            "macro_pcm_sha256":hashlib.sha256(macro_block[24:]).hexdigest(),
             "touch_to_sound":True,"panic_silence":True,"native_only":True})
         state=control("eco","on")
         if not state["eco"]["active"] or state["eco"]["origin"]!="native-engine":
@@ -186,6 +205,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             "frame_sha256":hashlib.sha256(frame).hexdigest(),
             "source_revision":state["audio"]["sourceRevision"],"full_width_xy":True,
             "touch_to_sound":True,"panic_silence":True,"native_only":True})
+        receipt["direct_picker"]=picker_witness(get, post, control, tap)
         receipt["result"]="PASS"
         return receipt
     finally:

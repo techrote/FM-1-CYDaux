@@ -153,6 +153,8 @@ constexpr Rect kChannelMinus{69,165,28,25}, kChannelPlus{126,165,28,25};
 constexpr Rect kCompanionRefresh{8,165,144,25};
 constexpr Rect kProgramMinus{225,165,28,25}, kProgramPlus{284,165,28,25};
 constexpr Rect kSetupBack{8,201,304,31};
+constexpr Rect kProfileBack{8,207,96,30}, kProfilePrevious{112,207,96,30}, kProfileNext{216,207,96,30};
+constexpr Rect profileChoiceRect(int i) { return {8+(i%2)*156,33+(i/2)*38,148,34}; }
 constexpr Rect kXYGate{234,60,78,36}, kXYExpand{234,102,78,28}, kXYTheme{234,136,78,28};
 constexpr Rect kCompanionXYPanic{234,170,78,26};
 constexpr Rect kFullPad{0,36,320,204}, kFullBack{4,3,60,28};
@@ -301,8 +303,9 @@ void drawHeader(Canvas& canvas,const UiModel& model) {
   drawPanel(canvas,{218,6,94,18},theme::panel,tint);
   centerText(canvas,{218,6,94,18},state,tint);
   drawPanel(canvas,kProfile,theme::panel);
-  drawText(canvas,14,39,model.firmware,theme::text,1,19);
-  drawText(canvas,137,39,">",theme::accent);
+  const bool picker=model.page==Page::Link;
+  drawText(canvas,14,39,model.firmware,theme::text,1,picker?15:19);
+  drawText(canvas,picker?122:137,39,picker?"LIST":">",theme::accent);
   drawPanel(canvas,kTrack,theme::panel);
   char text[32];
   if(model.companionEnabled)std::snprintf(text,sizeof(text),"PRESET %02u >",static_cast<unsigned>(model.presetIndex+1));
@@ -651,6 +654,24 @@ void drawLink(Canvas& canvas,const UiModel& model) {
     (model.syncSupported?(model.playingKnown?theme::accent:theme::blue):theme::muted);
   drawText(canvas,234,198,state,stateColor,1,14);
 }
+void drawProfilePicker(Canvas& canvas,const UiModel& model) {
+  drawText(canvas,8,8,"SELECT FM-1 PROFILE",theme::text,2,20);
+  const int offset=model.profileMenuOffset;
+  const int count=static_cast<int>(profileCount());
+  for (int slot=0;slot<8 && offset+slot<count;++slot) {
+    const int index=offset+slot;
+    const auto rect=profileChoiceRect(slot);
+    const auto& profile=profileAt(static_cast<std::size_t>(index));
+    const bool selected=index==model.profileIndex;
+    drawPanel(canvas,rect,selected?theme::panelActive:theme::panel,selected?theme::accent:theme::line);
+    drawText(canvas,rect.x+5,rect.y+6,profile.name,selected?theme::accent:theme::text,1,23);
+    drawText(canvas,rect.x+5,rect.y+19,selected?"CURRENT MAP":profile.sourceVersion,theme::muted,1,23);
+  }
+  drawText(canvas,8,191,"MAP ONLY / CONNECT TO MATCHING FIRMWARE",theme::muted,1,50);
+  button(canvas,kProfileBack,"BACK");
+  button(canvas,kProfilePrevious,"PREV",offset>0);
+  button(canvas,kProfileNext,"NEXT",offset+8<count);
+}
 void drawSetup(Canvas& canvas,const UiModel& model) {
   drawText(canvas,12,12,"DEVICE SETUP",theme::accent,2);
   drawText(canvas,12,42,"CONNECT PHONE OR COMPUTER TO WIFI:",theme::muted);
@@ -671,6 +692,7 @@ void Ui::render(Canvas& target,const UiModel& model) const {
   Canvas& canvas=model.companionEnabled?static_cast<Canvas&>(themed):target;
   canvas.fillRect(0,0,kScreenWidth,kScreenHeight,theme::background);
   if(model.setupActive){drawSetup(canvas,model);return;}
+  if(model.page==Page::Profiles){drawProfilePicker(canvas,model);return;}
   if(model.companionEnabled&&model.page==Page::XY&&model.fullscreenXY){drawFullscreenXY(canvas,model);return;}
   drawHeader(canvas,model);
   switch(model.page){
@@ -680,6 +702,7 @@ void Ui::render(Canvas& target,const UiModel& model) const {
     case Page::Link:drawLink(canvas,model);break;
     case Page::Sequence:drawSequence(canvas,model);break;
     case Page::Presets:drawPresets(canvas,model);break;
+    case Page::Profiles:break; // Modal page handled above.
   }
   fill(canvas,0,205,kScreenWidth,1,theme::line);
   if(model.companionEnabled){
@@ -758,6 +781,15 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
     capture_=rect;button_=action;gesture_=Gesture::Button;return true;
   };
   if(model.setupActive){captureButton(kSetupBack,{ActionType::Configure});return;}
+  if(model.page==Page::Profiles){
+    if(captureButton(kProfileBack,{ActionType::SetPage,static_cast<int16_t>(Page::Link)}))return;
+    const int offset=model.profileMenuOffset,count=static_cast<int>(profileCount());
+    if(captureButton(kProfilePrevious,{ActionType::ProfileMenuDelta,-1},offset>0))return;
+    if(captureButton(kProfileNext,{ActionType::ProfileMenuDelta,1},offset+8<count))return;
+    for(int slot=0;slot<8&&offset+slot<count;++slot)
+      if(captureButton(profileChoiceRect(slot),{ActionType::SelectProfile,static_cast<int16_t>(offset+slot)}))return;
+    return;
+  }
   auto captureXY=[&](Rect rect){
     if(!rect.contains(x,y)||!model.xyEnabled)return false;
     capture_=rect;gesture_=Gesture::XY;
@@ -779,7 +811,9 @@ void Ui::touch(TouchPhase phase,int x,int y,const UiModel& model){
       if(captureButton(extendedTabRect(i),{ActionType::SetPage,static_cast<int16_t>(extendedPages[i])}))return;
   }else for(int i=0;i<4;++i)
       if(captureButton(tabRect(i),{ActionType::SetPage,static_cast<int16_t>(i)}))return;
-  if(captureButton(kProfile,{ActionType::NextProfile},model.profiles>1))return;
+  if(captureButton(kProfile,model.page==Page::Link?
+      UiAction{ActionType::SetPage,static_cast<int16_t>(Page::Profiles)}:
+      UiAction{ActionType::NextProfile},model.profiles>1))return;
   if(model.companionEnabled){
     if(captureButton(kTrack,{ActionType::SetPage,static_cast<int16_t>(Page::Presets)}))return;
   }else if(captureButton(kTrack,{ActionType::SelectTrack,

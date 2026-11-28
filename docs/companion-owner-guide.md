@@ -42,6 +42,16 @@ Pointer release outside the screen, hiding the browser tab and loss of focus
 release the performance. After returning to the page, click **Enable sound**
 again. A stopped/abandoned audio consumer also triggers a server watchdog.
 
+## Switch profiles on the shared touchscreen
+
+On **LINK**, tap the firmware name to open the profile list. Tap Back or the
+current profile to keep the existing link; opening the menu releases held notes
+and stops the companion sequence. Select a different profile to retire the old
+link. Explicitly reconnect to the matching instrument and transport before
+playing a fresh note. Choosing a profile never installs firmware or implies
+physical compatibility. Chronomorph and Ecophon are separate native-only
+editors in the desktop evaluator, not CY1 device profiles.
+
 ## What the labels mean
 
 **NATIVE** is readback from the actual native audio engine. **DEMO** is a silent

@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 namespace fm1 {
-enum class Page : uint8_t { Play, Mix, XY, Link, Sequence, Presets };
+enum class Page : uint8_t { Play, Mix, XY, Link, Sequence, Presets, Profiles };
 enum class ValueOrigin : uint8_t { Unknown, Pending, Sent, Device, Demo, Native };
 enum class TransportKind : uint8_t { Demo, Ble, Wifi, Native };
 enum class ConnectionState : uint8_t { Offline, Connecting, Connected, Failed };
@@ -26,6 +26,7 @@ struct UiModel {
     TransportKind transport = TransportKind::Demo;
     ConnectionState connection = ConnectionState::Offline;
     uint8_t profileIndex = 0, profiles = 1;
+    uint8_t profileMenuOffset = 0;
     uint8_t trackIndex = 0, tracks = 1, midiChannel = 1;
     std::array<const char*, kMaxTracks> trackNames{};
     std::array<ControlView, 4> controls{};
@@ -74,7 +75,7 @@ enum class ActionType : uint8_t {
     SetStepNote, SetStepVelocity, SetStepGate,
     SequenceLengthDelta, SequenceTempoDelta,
     ToggleFullscreen, NextTheme, SelectPreset, PresetDelta,
-    NoteDelta, VelocityDelta, ToggleXYGate
+    NoteDelta, VelocityDelta, ToggleXYGate, SelectProfile, ProfileMenuDelta
 };
 struct UiAction { ActionType type; int16_t a = 0; int16_t b = 0; };
 } // namespace fm1

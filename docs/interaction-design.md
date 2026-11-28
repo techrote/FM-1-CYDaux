@@ -49,6 +49,17 @@ manual note stops the local monophonic sequence before the new note is
 admitted. This preserves one clear owner for note release on these engines.
 Panic remains reachable on the normal and fullscreen performance pages.
 
+## Direct instrument selection
+
+On **Link**, tap the firmware name marked **LIST** to open the common profile
+chooser. The current map is highlighted; choose another map directly or use
+Back to retain the current connection. Choosing a different map retires the
+old connection and requires an explicit Connect to the matching firmware.
+The chooser stops companion performance capture and local sequencing; it does
+not install or change any FM-1 firmware. Other pages retain quick profile
+cycling. Native-only Chronomorph and Ecophon remain separate evaluator editors,
+not entries in the physical companion registry.
+
 ## Pages
 
 | Page | Implemented interaction | State interpretation |

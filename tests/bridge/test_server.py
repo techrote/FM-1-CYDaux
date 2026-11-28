@@ -301,6 +301,8 @@ class CompanionEpochSocketTests(unittest.TestCase):
         # mutation sequence. The bridge must retain the accepted note sequence.
         self.send_cy(cy(1, 99, 8192, (2,)))
         self.send_cy(cy(1, 100, 8192, (3,)))
+        self.assertEqual(self.peer.next(), {
+            "type": "error", "message": "CY1 session differs; reconnect required"})
         self.send_cy(cy(8, 99, 1))  # duplicate panic must not clear release duty
         self.barrier()
         self.peer.close()
@@ -404,6 +406,40 @@ class CompanionEpochSocketTests(unittest.TestCase):
         for _ in range(10):
             self.server.step(0.001)
         self.assertEqual(list(self.endpoint.sent)[3:], [
+            cy(1, 100, 0, (2,)), cy(7, 100, 1, (60, 100)), cy(8, 100, 2)])
+
+    def test_new_tcp_requires_discovery_and_rejects_foreign_session(self):
+        self.hello()
+        self.play(99)
+        self.peer.close()
+        for _ in range(10):
+            self.server.step(0.001)
+        self.assertEqual(self.endpoint.sent[-1], cy(8, 99, 2))
+        self.assertIsNone(self.server.client)
+        # Keep the same connected USB endpoint and frozen clock. The old
+        # device lease could still accept a forward mutation after Panic.
+        self.peer = Peer(self.server)
+        self.hello()
+        before = list(self.endpoint.sent)
+        for message in (cy(7, 99, 3, (64, 110)), cy(5, 99, 4, (0, 100))):
+            self.send_cy(message)
+            self.assertEqual(self.peer.next(), {
+                "type": "error", "message": "CY1 discovery required on this connection"})
+        self.send_cy(cy(1, 0, 0, (2,)))
+        self.assertEqual(self.peer.next(), {
+            "type": "error", "message": "CY1 session differs; reconnect required"})
+        self.assertEqual(list(self.endpoint.sent), before)
+        self.play(100)
+        for message in (cy(1, 99, 4, (3,)), cy(7, 99, 5, (64, 110)),
+                        cy(8, 99, 6)):
+            self.send_cy(message)
+            self.assertEqual(self.peer.next(), {
+                "type": "error", "message": "CY1 session differs; reconnect required"})
+        self.barrier()
+        self.peer.close()
+        for _ in range(10):
+            self.server.step(0.001)
+        self.assertEqual(list(self.endpoint.sent)[len(before):], [
             cy(1, 100, 0, (2,)), cy(7, 100, 1, (60, 100)), cy(8, 100, 2)])
 
     def test_initial_wait_is_not_a_lost_epoch(self):
