@@ -2,6 +2,7 @@
 #include "fm1/ui.hpp"
 #include "virtual_instrument.hpp"
 #include "chrono_panel.hpp"
+#include "eco_panel.hpp"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -72,18 +73,21 @@ class Simulator {
     if(name.empty()||name[0]=='#')return true;
     try {
       if(name=="quit"){std::cout<<"{\"ok\":true,\"quit\":true}"<<std::endl;return false;}
-      if(name=="chrono") {
+      if(name=="chrono"||name=="eco") {
         std::string mode,extra;stream>>mode;
         if((mode!="on"&&mode!="off")||(stream>>extra))throw std::runtime_error("chrono expects on or off");
-        if((mode=="on")!=chronoMode_) {
+        const bool newChrono=name=="chrono"?mode=="on":(mode=="on"?false:chronoMode_);
+        const bool newEco=name=="eco"?mode=="on":(mode=="on"?false:ecoMode_);
+        if(newChrono!=chronoMode_||newEco!=ecoMode_) {
           ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});
           controller_.dispatch({fm1::ActionType::Disconnect});settle();
-          chrono_.disconnect();chronoPanel_.cancel();sampleClock_=false;sampleRemainder_=0;
-          chronoMode_=mode=="on";chronoPeak_=0;chronoRms_=0;chronoFrames_=0;++chronoGeneration_;++chronoRevision_;
+          chrono_.disconnect();chronoPanel_.cancel();eco_.disconnect();ecoPanel_.cancel();sampleClock_=false;sampleRemainder_=0;
+          chronoMode_=newChrono;ecoMode_=newEco;chronoPeak_=0;chronoRms_=0;chronoFrames_=0;++chronoGeneration_;++chronoRevision_;
           if(chronoMode_)chrono_.reset(1,0);
+          if(ecoMode_)eco_.reset(1,0);
         }
-      }else if(chronoMode_ && name!="down"&&name!="move"&&name!="up"&&name!="tap"&&name!="cancel"&&name!="tick"&&name!="state"&&name!="frame"&&name!="audio"&&name!="audio-clock"&&name!="panic"&&name!="disconnect"){
-        throw std::runtime_error("Leave native Chronomorph view before using another profile");
+      }else if((chronoMode_||ecoMode_) && name!="down"&&name!="move"&&name!="up"&&name!="tap"&&name!="cancel"&&name!="tick"&&name!="state"&&name!="frame"&&name!="audio"&&name!="audio-clock"&&name!="panic"&&name!="disconnect"){
+        throw std::runtime_error("Leave native editor before using another profile");
       }else if(name=="down"||name=="move"||name=="up"||name=="tap") {
         int x,y;
         if(!(stream>>x>>y)||x< -4096||x>4096||y< -4096||y>4096)
@@ -91,6 +95,9 @@ class Simulator {
         if(chronoMode_) {
           if(name=="tap"){chronoTouch(fm1::TouchPhase::Down,x,y);chronoTouch(fm1::TouchPhase::Up,x,y);}
           else chronoTouch(name=="down"?fm1::TouchPhase::Down:name=="move"?fm1::TouchPhase::Move:fm1::TouchPhase::Up,x,y);
+        }else if(ecoMode_) {
+          if(name=="tap"){ecoTouch(fm1::TouchPhase::Down,x,y);ecoTouch(fm1::TouchPhase::Up,x,y);}
+          else ecoTouch(name=="down"?fm1::TouchPhase::Down:name=="move"?fm1::TouchPhase::Move:fm1::TouchPhase::Up,x,y);
         }else if(name=="tap") {
           ui_.touch(fm1::TouchPhase::Down,x,y,controller_.model());
           ui_.touch(fm1::TouchPhase::Up,x,y,controller_.model());
@@ -100,7 +107,7 @@ class Simulator {
           ui_.touch(phase,x,y,controller_.model());
         }
       }else if(name=="cancel") {
-        ui_.cancelTouch();chronoPanel_.cancel();
+        ui_.cancelTouch();chronoPanel_.cancel();ecoPanel_.cancel();
       }else if(name=="tick") {
         uint32_t elapsed=0;
         if(!(stream>>elapsed)||elapsed>60000)throw std::runtime_error("tick needs 0..60000 ms");
@@ -124,9 +131,9 @@ class Simulator {
       }else if(name=="connect") {
         controller_.dispatch({fm1::ActionType::Connect});
       }else if(name=="disconnect") {
-        if(chronoMode_){stopChrono();sampleClock_=false;}else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Disconnect});}
+        if(chronoMode_||ecoMode_){stopChrono();sampleClock_=false;}else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Disconnect});}
       }else if(name=="panic") {
-        if(chronoMode_)stopChrono();else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});}
+        if(chronoMode_||ecoMode_)stopChrono();else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});}
       }else if(name=="preset") {
         unsigned value=0;
         if(!(stream>>value)||value>127)throw std::runtime_error("preset needs 0..127");
@@ -148,7 +155,7 @@ class Simulator {
         std::string mode;stream>>mode;
         if(mode!="on"&&mode!="off")throw std::runtime_error("audio-clock expects on or off");
         sampleClock_=mode=="on";sampleRemainder_=0;
-        if(!sampleClock_){if(chronoMode_)stopChrono();else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});}}
+        if(!sampleClock_){if(chronoMode_||ecoMode_)stopChrono();else{ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});}}
       }else if(name=="audio") {
         unsigned count=0;std::string path;
         if(!(stream>>count)||count<1||count>fm1::VirtualInstrument::kMaximumFrames)
@@ -159,8 +166,8 @@ class Simulator {
         // The browser consumes this actual-core PCM. While audio is running,
         // audio frames own the controller clock; HTTP/UI wall time does not
         // double-advance the sequencer. Event quantum <=128 engine samples.
-        if(chronoMode_){
-          if(!chrono_.render(audio_.data(),count))throw std::runtime_error("Chronomorph render refused");
+        if(chronoMode_||ecoMode_){
+          if(!(ecoMode_?eco_.render(audio_.data(),count):chrono_.render(audio_.data(),count)))throw std::runtime_error("Native editor render refused");
           uint64_t squares=0;unsigned peak=0;
           for(unsigned i=0;i<count;++i){
             const int value=audio_[i];
@@ -204,7 +211,7 @@ class Simulator {
       }else if(name=="frame") {
         std::string path;std::getline(stream>>std::ws,path);
         if(path.empty())throw std::runtime_error("frame requires a PPM filename");
-        settle();if(chronoMode_)chronoPanel_.render(frame_,chrono_.snapshot());else ui_.render(frame_,controller_.model());frame_.writePpm(path);
+        settle();if(ecoMode_)ecoPanel_.render(frame_,eco_.snapshot());else if(chronoMode_)chronoPanel_.render(frame_,chrono_.snapshot());else ui_.render(frame_,controller_.model());frame_.writePpm(path);
       }else if(name!="state")throw std::runtime_error("unknown simulator command");
       settle();snapshot();
     }catch(const std::exception& error) {
@@ -220,16 +227,23 @@ class Simulator {
   fm1::VirtualInstrument instrument_;
   fm1::ChronoAdapter chrono_;
   fm1::ChronoPanel chronoPanel_;
-  bool chronoMode_=false;
+  fm1::EcoAdapter eco_;
+  fm1::EcoPanel ecoPanel_;
+  bool chronoMode_=false,ecoMode_=false;
   uint32_t chronoGeneration_=0x80000000u;
   uint64_t chronoRevision_=0,chronoFrames_=0;
   unsigned chronoPeak_=0;
   double chronoRms_=0;
-  void stopChrono(){chrono_.stop();chronoPanel_.cancel();chronoPeak_=0;chronoRms_=0;++chronoGeneration_;++chronoRevision_;}
+  void stopChrono(){chrono_.stop();chronoPanel_.cancel();eco_.stop();ecoPanel_.cancel();chronoPeak_=0;chronoRms_=0;++chronoGeneration_;++chronoRevision_;}
   void chronoTouch(fm1::TouchPhase phase,int x,int y){
     const auto change=chronoPanel_.touch(phase,x,y,chrono_,sampleClock_);
     if(change!=fm1::ChronoPanel::Change::None)++chronoRevision_;
     if(change==fm1::ChronoPanel::Change::Flush){chronoPeak_=0;chronoRms_=0;++chronoGeneration_;}
+  }
+  void ecoTouch(fm1::TouchPhase phase,int x,int y){
+    const auto change=ecoPanel_.touch(phase,x,y,eco_,sampleClock_);
+    if(change!=fm1::EcoPanel::Change::None)++chronoRevision_;
+    if(change==fm1::EcoPanel::Change::Flush){chronoPeak_=0;chronoRms_=0;++chronoGeneration_;}
   }
   std::array<int16_t,fm1::VirtualInstrument::kMaximumFrames> audio_{};
   bool nativeConnected_=false,sampleClock_=false;
@@ -315,14 +329,14 @@ class Simulator {
       <<",\"presetName\":"<<quoted(m.presetName)
       <<",\"sourceLabel\":"<<quoted(m.sourceLabel)
       <<",\"capabilityLabel\":"<<quoted(m.capabilityLabel)
-      <<",\"audio\":{\"mode\":"<<quoted(chronoMode_?"native-engine":nativeConnected_?instrument_.mode():"no-audio-engine")
-      <<",\"name\":"<<quoted(chronoMode_?"Chronomorph":instrument_.name())
-      <<",\"sourceRevision\":"<<quoted(chronoMode_?"7fa9a16b55b321a1a8b46e174ed15e927aeaece6":instrument_.sourceRevision())
-      <<",\"sampleRate\":"<<(chronoMode_?CM_RATE:instrument_.sampleRate())
-      <<",\"generation\":"<<(chronoMode_?chronoGeneration_:instrument_.generation())
+      <<",\"audio\":{\"mode\":"<<quoted((chronoMode_||ecoMode_)?"native-engine":nativeConnected_?instrument_.mode():"no-audio-engine")
+      <<",\"name\":"<<quoted(ecoMode_?"Ecophon":chronoMode_?"Chronomorph":instrument_.name())
+      <<",\"sourceRevision\":"<<quoted(ecoMode_?"feda1327f93f10b4070e8596cab09141c9203c4d":chronoMode_?"7fa9a16b55b321a1a8b46e174ed15e927aeaece6":instrument_.sourceRevision())
+      <<",\"sampleRate\":"<<(ecoMode_?ECO_RATE:chronoMode_?CM_RATE:instrument_.sampleRate())
+      <<",\"generation\":"<<((chronoMode_||ecoMode_)?chronoGeneration_:instrument_.generation())
       <<",\"clockRunning\":"<<(sampleClock_?"true":"false")
-      <<",\"frames\":"<<(chronoMode_?chronoFrames_:instrument_.renderedFrames())
-      <<",\"peak\":"<<(chronoMode_?chronoPeak_:instrument_.peak())<<",\"rms\":"<<(chronoMode_?chronoRms_:instrument_.rms())
+      <<",\"frames\":"<<((chronoMode_||ecoMode_)?chronoFrames_:instrument_.renderedFrames())
+      <<",\"peak\":"<<((chronoMode_||ecoMode_)?chronoPeak_:instrument_.peak())<<",\"rms\":"<<((chronoMode_||ecoMode_)?chronoRms_:instrument_.rms())
       <<",\"rejected\":"<<instrument_.rejected()
       <<",\"queueOverflows\":"<<instrument_.queueOverflows()<<'}'
       <<",\"tx\":"<<m.transmitted<<",\"rx\":"<<m.received<<",\"revision\":"<<m.revision
@@ -362,6 +376,19 @@ class Simulator {
     for(unsigned i=0;i<CM_LANES;++i){if(i)std::cout<<',';const auto& l=cv.lane[i];
       std::cout<<"{\"length\":"<<unsigned(l.length)<<",\"mask\":"<<l.mask<<",\"step\":"<<unsigned(l.step)
         <<",\"cycle\":"<<unsigned(l.cycle)<<",\"clock\":"<<l.clock<<",\"ticks\":"<<l.ticks<<",\"hits\":"<<l.hits<<'}';
+    }
+    const auto ev=eco_.snapshot();
+    std::cout<<"]},\"eco\":{\"active\":"<<(ecoMode_?"true":"false")
+      <<",\"origin\":\"native-engine\",\"running\":"<<(ev.running?"true":"false")
+      <<",\"frozen\":"<<(ev.frozen?"true":"false")<<",\"preset\":"<<unsigned(ev.preset)
+      <<",\"fertility\":"<<unsigned(ev.fertility)<<",\"sharing\":"<<unsigned(ev.sharing)<<",\"pressure\":"<<unsigned(ev.pressure)
+      <<",\"ticks\":"<<ev.ticks<<",\"births\":"<<ev.births<<",\"deaths\":"<<ev.deaths<<",\"gifts\":"<<ev.gifts
+      <<",\"moves\":"<<ev.moves<<",\"consumed\":"<<ev.consumed<<",\"resources\":[";
+    for(unsigned i=0;i<ECO_PATCHES;++i){if(i)std::cout<<',';std::cout<<ev.resource[i];}
+    std::cout<<"],\"agents\":[";
+    for(unsigned i=0;i<ECO_AGENTS;++i){if(i)std::cout<<',';const auto& a=ev.agents[i];
+      std::cout<<"{\"alive\":"<<(a.alive?"true":"false")<<",\"patch\":"<<unsigned(a.patch)<<",\"species\":"<<unsigned(a.species)
+        <<",\"trait\":"<<unsigned(a.trait)<<",\"energy\":"<<a.energy<<",\"envelope\":"<<a.envelope<<'}';
     }
     std::cout<<"]},\"profiles\":[";
     for(std::size_t i=0;i<fm1::profileCount();++i) {

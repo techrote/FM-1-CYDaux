@@ -87,7 +87,7 @@ def main() -> None:
                         audio_source="Actual portable native engines; not FM-1 CPU emulation",
                         standalone_launcher=args.launcher.name if args.launcher else None,
                         audio_rates={"zaaggenz-native": 44100, "xenoresonator-native": 24000, "grimoire-native": 24000,
-                                     "chronomorph-native": 24000})
+                                     "chronomorph-native": 24000, "ecophon-native": 24000})
     shutil.copy2(ROOT / "LICENSE", destination / "LICENSE")
     shutil.copy2(ROOT / "THIRD_PARTY.md", destination / "THIRD_PARTY.md")
     shutil.copytree(ROOT / "licenses", destination / "licenses")

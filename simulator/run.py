@@ -56,16 +56,16 @@ def find_binary(explicit: str | None = None, build: bool = True) -> Path:
         )
     output = ROOT / "build" / f"fm1-simulator{suffix}"
     output.parent.mkdir(parents=True, exist_ok=True)
-    sources = sorted((ROOT / "src").glob("*.cpp")) + [HERE / "main.cpp", HERE / "virtual_instrument.cpp", HERE / "chrono_adapter.cpp", HERE / "chrono_panel.cpp"]
+    sources = sorted((ROOT / "src").glob("*.cpp")) + [HERE / "main.cpp", HERE / "virtual_instrument.cpp", HERE / "chrono_adapter.cpp", HERE / "chrono_panel.cpp", HERE / "eco_adapter.cpp", HERE / "eco_panel.cpp"]
     c_sources = [ROOT / "third_party" / "zaaggenz" / "src" / name for name in (
         "dsp.c", "engine.c", "presets.c", "source_bank.c"
-    )] + [ROOT / "third_party" / "xenoresonator" / "xeno.c", ROOT / "third_party" / "grimoire" / "orbit.c", ROOT / "third_party" / "chronomorph" / "chrono.c"]
+    )] + [ROOT / "third_party" / "xenoresonator" / "xeno.c", ROOT / "third_party" / "grimoire" / "orbit.c", ROOT / "third_party" / "chronomorph" / "chrono.c", ROOT / "third_party" / "ecophon" / "ecophon.c"]
     if not all(source.is_file() for source in sources + c_sources):
         raise RuntimeError("The simulator sources are incomplete; extract the whole source package")
     print("Building shared CYD controller and actual native instrument cores...", flush=True)
     includes = ["-I", str(ROOT / "include"), "-I", str(HERE),
                 "-I", str(ROOT / "third_party" / "zaaggenz" / "include"),
-                "-I", str(ROOT / "third_party" / "xenoresonator"), "-I", str(ROOT / "third_party" / "grimoire"), "-I", str(ROOT / "third_party" / "chronomorph")]
+                "-I", str(ROOT / "third_party" / "xenoresonator"), "-I", str(ROOT / "third_party" / "grimoire"), "-I", str(ROOT / "third_party" / "chronomorph"), "-I", str(ROOT / "third_party" / "ecophon")]
     objects = []
     for source in c_sources:
         obj = output.parent / (source.stem + "-native.o")
@@ -224,7 +224,7 @@ def command_for_request(path: str, data: dict) -> str:
         name, value = data.get("name"), data.get("value", "")
         if name in ("connect", "disconnect", "panic", "sequence", "bank"):
             return name
-        if name not in ("profile", "page", "transport", "echo", "audio-clock", "preset", "chrono"):
+        if name not in ("profile", "page", "transport", "echo", "audio-clock", "preset", "chrono", "eco"):
             raise ValueError("Unknown control")
         if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9_-]{1,32}", value):
             raise ValueError("Invalid control value")

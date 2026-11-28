@@ -130,3 +130,6 @@ Draft/HOLD pending owner review.
 
 Source and complete development instructions:
 <https://github.com/techrote/FM-1-CYDaux>
+
+### Ecophon (native-only habitat)
+Open Ecophon native habitat, enable sound, then tap START. Four patch resource bars and eight possible agent slots reflect actual local core state. XY maps fertility/pressure at 0–255; sharing is a separate slider. Freeze suppresses ecology interactions, not resource replenishment or PCM; STOP/Panic pauses model time. Presets reset and stop. No FM-1 endpoint, device telemetry or physical qualification is implied.

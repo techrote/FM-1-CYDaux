@@ -23,3 +23,6 @@ visualization, three environmental controls, regime reset, freeze, start and pan
 Use the common PCM lease and label actual local native state; exercise authored Habitat
 Arc cues with the CYBER fixture before claiming them. No MIDI or enhanced transport,
 device telemetry, ESP32 profile, physical claim, or new wire format.
+
+## Habitat panel candidate
+The common native process now links Ecophon and exposes the local habitat editor via the same Canvas, touch capture, audio lease and package inventory. Actual local agent slots, resource levels and energy/envelope bars are bounded; full-width XY and sharing, freeze, preset reset and Start/Stop are exposed. Switching between native editors cancels captured input and retires the shared native-editor audio generation. Hosted tests and independent QA pending. Habitat Arc automation and dedicated browser witness are subsequent work; no claim of implementation here.
