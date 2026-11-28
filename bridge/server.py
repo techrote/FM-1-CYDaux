@@ -20,6 +20,14 @@ MAX_OUTGOING_BYTES = 16 * 1024
 LEGACY_PROFILES = frozenset(("sloop", "skiff", "melodee", "x0x"))
 COMPANION_PROFILES = frozenset(("zaaggenz-native", "xenoresonator-native", "grimoire-native"))
 PROFILES = LEGACY_PROFILES | COMPANION_PROFILES
+CY1_PREFIX = (0xF0, 0x7D, 0x43, 0x59, 1, 0)
+CY1_SIZES = {1: 1, 2: 6, 3: 0, 4: 23, 5: 2, 6: 1, 7: 2, 8: 0, 9: 1}
+
+
+def valid_cy1_envelope(message: tuple[int, ...]) -> bool:
+    return (len(message) >= 15 and message[:6] == CY1_PREFIX
+            and len(message) == 15 + message[13]
+            and CY1_SIZES.get(message[6]) == message[13])
 
 
 @dataclass
@@ -48,13 +56,7 @@ class Session:
         This does not negotiate capabilities or acknowledge a device. The
         endpoint/controller own those checks. Unmodified Fune ignores CY1.
         """
-        if (len(message) < 15 or message[:6] != (0xF0, 0x7D, 0x43, 0x59, 1, 0)
-                or len(message) != 15 + message[13]):
-            return
-        # Match the native CY1 codec's operation/length envelope. A malformed
-        # message forwarded to MIDI cannot consume an endpoint sequence.
-        sizes = {1: 1, 2: 6, 3: 0, 4: 23, 5: 2, 6: 1, 7: 2, 8: 0, 9: 1}
-        if sizes.get(message[6]) != message[13]:
+        if not valid_cy1_envelope(message):
             return
         session = sum(message[7 + i] << (7 * i) for i in range(4))
         sequence = message[11] | message[12] << 7
@@ -124,6 +126,12 @@ class Session:
                 if not isinstance(data, list):
                     raise ValueError("MIDI data must be an array")
                 message = validate_midi_bytes(data)
+                # Actual CY1 firmware can consume a forward sequence even if
+                # it refuses an unknown operation or wrong payload size.
+                # Reject these locally before forwarding so release tracking
+                # cannot diverge. Other SysEx namespaces/versions are unchanged.
+                if message[:6] == CY1_PREFIX and not valid_cy1_envelope(message):
+                    raise ValueError("Invalid CY1 operation or payload size")
                 self.endpoint.send(message)
                 self._observe_companion(message)
                 # A CC-only editor session must not silence somebody else's
