@@ -44,6 +44,8 @@ standard library. The 5×7 screen font and UI renderer are original code.
 
 | Chronomorph | `techrote/FM-1-VIBEWARE` at `7fa9a16b55b321a1a8b46e174ed15e927aeaece6`, `instruments/chronomorph` | Original owner-provided portable core, used in separate native adapter test; owner-authorized integration only. LicenseRef-Owner-Provided-Unspecified; no general redistribution grant asserted. |
 
+| Ecophon | `techrote/FM-1-VIBEWARE` at `feda1327f93f10b4070e8596cab09141c9203c4d`, `instruments/ecophon` | Original owner-provided portable core; host semantic adapter test only, owner-authorized integration. LicenseRef-Owner-Provided-Unspecified; no general redistribution grant asserted. |
+
 `third_party/*/UPSTREAM.json` records source locations, revisions, exact file
 hashes and local modifications. These source files and notices travel with the
 owner evaluator so the engine behavior and licensing boundary remain inspectable.
