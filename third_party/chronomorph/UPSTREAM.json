@@ -9,5 +9,14 @@
     "chrono.h": "1ec13770d7818277e4b82ab0dcc8e545fe926b21",
     "profile.json": "3c0a8fbdf610cccb3531fe475055e82b3d2fcaaa"
   },
-  "modifications": "None; companion adapter separate."
+  "modifications": "None; companion adapter separate.",
+  "additional_sources": [
+    {
+      "path": "instruments/chronomorph/control7.h",
+      "revision": "89f0058fd79c365678cd856709811d8fa01c3db7",
+      "git_blob_sha1": "fe7e53b736a3c8441325d1bb7423f246d6f0e4c7",
+      "license": "LicenseRef-Owner-Provided-Unspecified",
+      "modifications": "None; local normalized semantics only."
+    }
+  ]
 }

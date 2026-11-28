@@ -1,6 +1,7 @@
 #pragma once
 extern "C" {
 #include "chrono.h"
+#include "control7.h"
 }
 #include <array>
 #include <cstdint>
@@ -30,6 +31,9 @@ public:
     ChronoAdapter() { reset(1,0); }
     bool reset(uint32_t seed, unsigned preset);
     bool controls(unsigned bpm,int warp,unsigned variation);
+    // GEN's exact normalized control contract; native readback is not a device ACK.
+    cm_knob_result normalized(cm_knob knob,unsigned code) { return cm_knob_apply(&state_,knob,code); }
+    bool normalizedRead(cm_knob knob,cm_knob_readback& value) const { return cm_knob_read(&state_,knob,&value)!=0; }
     bool edit(unsigned lane,unsigned length,unsigned mask);
     // Apply all three patterns and controls atomically without rewinding clocks.
     bool scene(unsigned bpm,int warp,unsigned variation,

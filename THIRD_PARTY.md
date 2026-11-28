@@ -59,3 +59,5 @@ installed runtime license and PyInstaller license with the package.
 
 The esptool flasher is installed separately at version 4.5.1. Its source and
 license are at <https://github.com/espressif/esptool/tree/v4.5.1>.
+
+Chronomorph `control7.h` is additionally pinned to VIBEWARE `89f0058fd79c365678cd856709811d8fa01c3db7` (Git blob `fe7e53b736a3c8441325d1bb7423f246d6f0e4c7`), unchanged, under the same owner-provided unspecified rights status. No general redistribution grant or device wire allocation is implied.
