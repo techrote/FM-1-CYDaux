@@ -53,8 +53,10 @@ foreach(source IN LISTS TEST_SOURCES)
 endforeach()
 
 # Native-only Chronomorph semantic adapter: actual portable core, no ESP32 DSP.
-add_library(fm1chrono simulator/chrono_adapter.cpp third_party/chronomorph/chrono.c)
+add_library(fm1chrono simulator/chrono_adapter.cpp simulator/chrono_panel.cpp third_party/chronomorph/chrono.c)
 target_include_directories(fm1chrono PUBLIC simulator third_party/chronomorph)
+target_link_libraries(fm1chrono PUBLIC fm1core)
+target_link_libraries(fm1-simulator PRIVATE fm1chrono)
 add_executable(chrono_adapter_test simulator/chrono_adapter_test.cpp)
 target_link_libraries(chrono_adapter_test PRIVATE fm1chrono)
 if(MSVC)

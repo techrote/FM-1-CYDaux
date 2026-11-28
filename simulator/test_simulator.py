@@ -126,6 +126,48 @@ class NativeIntegrationTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=3)
 
+    def test_chronomorph_native_editor_pcm_and_lifecycle(self):
+        def tap(x, y):
+            return self.engine.command(f"tap {x} {y}")
+        opened = self.engine.command("chrono on")
+        self.assertTrue(opened["chrono"]["active"])
+        self.assertEqual(opened["audio"]["sampleRate"], 24000)
+        self.assertEqual(opened["chrono"]["origin"], "native-engine")
+        before = self.engine.frame()
+        # Grow lane 0 to 16, then edit its highest bit without seven-bit truncation.
+        for _ in range(9):
+            tap(290, 30)
+        edited = tap(8 + 19 * 15 + 8, 48)
+        self.assertEqual(edited["chrono"]["lanes"][0]["length"], 16)
+        self.assertTrue(edited["chrono"]["lanes"][0]["mask"] & 0x8000)
+        self.assertNotEqual(self.engine.frame(), before)
+        # Cancelled/cross-cell gestures never mutate the pattern.
+        mask = edited["chrono"]["lanes"][0]["mask"]
+        self.engine.command("down 15 48")
+        self.engine.command("up 34 48")
+        self.assertEqual(self.engine.state["chrono"]["lanes"][0]["mask"], mask)
+        self.assertFalse(tap(45, 220)["chrono"]["playing"], "no audio lease")
+        self.engine.command("audio-clock on")
+        running = tap(45, 220)
+        self.assertTrue(running["chrono"]["playing"])
+        pcm = b"".join(self.engine.audio(4096)[24:] for _ in range(16))
+        self.assertNotEqual(pcm, bytes(len(pcm)))
+        live = self.engine.state["chrono"]
+        self.assertGreater(live["lanes"][0]["ticks"], 0)
+        self.assertNotEqual(live["lanes"][0]["ticks"], live["lanes"][1]["ticks"])
+        generation = self.engine.state["audio"]["generation"]
+        self.engine.command("panic")
+        self.assertGreater(self.engine.state["audio"]["generation"], generation)
+        self.assertEqual(self.engine.audio(1024)[24:], bytes(2048))
+        tap(45, 220)
+        self.engine.command("audio-clock off")
+        self.assertFalse(self.engine.state["chrono"]["playing"])
+        self.assertEqual(self.engine.audio(1024)[24:], bytes(2048))
+        self.engine.command("chrono off")
+        self.assertFalse(self.engine.state["chrono"]["active"])
+        self.engine.command("profile melodee")
+        self.assertEqual(self.engine.state["profile"], "melodee")
+
     def test_native_frame_path_supports_spaces_and_unicode(self):
         with tempfile.TemporaryDirectory(prefix="cyd path ") as directory:
             self.engine.frame_path = Path(directory) / "display with spaces \u00fc.ppm"
