@@ -3,10 +3,11 @@
 import socket
 import time
 import unittest
+from unittest.mock import patch
 
 from bridge.midi_io import EndpointUnavailable, MockMidi
 from bridge.protocol import LineDecoder, encode_frame
-from bridge.server import BridgeServer
+from bridge.server import BridgeServer, MAX_OUTGOING_BYTES
 
 
 class Clock:
@@ -346,6 +347,64 @@ class CompanionEpochSocketTests(unittest.TestCase):
         self.send_cy(future)
         self.barrier()
         self.assertEqual(list(self.endpoint.sent), [legacy, tuple(future)])
+
+    def test_slow_reader_recovers_below_output_budget_in_order(self):
+        self.hello()
+        self.play(99)
+        frames = [cy(4, 99, i, (0,) * 23) for i in range(64)]
+        # Model a temporarily unwritable TCP socket deterministically.
+        # Actual localhost framing, queueing and later writes still run.
+        with patch.object(self.server, "_write", return_value=None):
+            for message in frames:
+                self.endpoint.inject(message)
+            self.server.step(0)
+            self.assertIsNotNone(self.server.client)
+            self.assertEqual(bytes(self.server.client.outgoing), b"".join(
+                encode_frame({"type": "midi", "data": list(m)}) for m in frames))
+        for message in frames:
+            self.assertEqual(self.peer.next(), {"type": "midi", "data": list(message)})
+        self.barrier()
+        self.assertEqual(len(self.server.client.outgoing), 0)
+        self.assertEqual(len(self.endpoint.sent), 2)
+
+    def test_slow_reader_over_budget_releases_and_never_replays(self):
+        self.hello()
+        self.play(99)
+        message = cy(4, 99, 1, (0,) * 23)
+        encoded = encode_frame({"type": "midi", "data": list(message)})
+        capacity = MAX_OUTGOING_BYTES // len(encoded)
+        retired = self.server.client
+        with patch.object(self.server, "_write", return_value=None):
+            remaining = capacity
+            while remaining:
+                batch = min(remaining, 128)
+                for _ in range(batch):
+                    self.endpoint.inject(message)
+                self.server.step(0)
+                self.assertIs(self.server.client, retired)
+                remaining -= batch
+            self.assertEqual(len(retired.outgoing), capacity * len(encoded))
+            self.assertLessEqual(len(retired.outgoing), MAX_OUTGOING_BYTES)
+            self.endpoint.inject(message)
+            self.server.step(0)
+        self.assertIsNone(self.server.client)
+        self.assertEqual(len(retired.outgoing), 0)
+        self.assertEqual(list(self.endpoint.sent), [
+            cy(1, 99, 0, (2,)), cy(7, 99, 1, (60, 100)), cy(8, 99, 2)])
+        self.assertIsNone(self.peer.next())
+        # Simulate an old USB reply arriving before a new authenticated client.
+        self.endpoint.inject(message)
+        self.peer.close()
+        self.peer = Peer(self.server)
+        self.hello()
+        self.barrier()
+        self.assertEqual(len(self.endpoint.sent), 3)
+        self.play(100)
+        self.peer.close()
+        for _ in range(10):
+            self.server.step(0.001)
+        self.assertEqual(list(self.endpoint.sent)[3:], [
+            cy(1, 100, 0, (2,)), cy(7, 100, 1, (60, 100)), cy(8, 100, 2)])
 
     def test_initial_wait_is_not_a_lost_epoch(self):
         self.endpoint.connected = False
