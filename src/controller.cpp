@@ -339,7 +339,12 @@ void Controller::dispatch(UiAction a) {
     const auto& p=profileAt(model_.profileIndex);
     switch (a.type) {
         case ActionType::SetPage:
-            if (a.a>=0 && a.a<=5 && (a.a<=3 || companionProfile())) {
+            if (a.a==static_cast<int>(Page::Profiles) && model_.page==Page::Link) {
+                ++model_.interactionEpoch;
+                stopSequence(); releaseNote();
+                model_.profileMenuOffset=static_cast<uint8_t>((model_.profileIndex/8u)*8u);
+                model_.page=Page::Profiles; model_.fullscreenXY=false;
+            } else if (a.a>=0 && a.a<=5 && (a.a<=3 || companionProfile())) {
                 ++model_.interactionEpoch;
                 releaseNote(); model_.page=static_cast<Page>(a.a); model_.fullscreenXY=false;
             }
@@ -348,6 +353,23 @@ void Controller::dispatch(UiAction a) {
             if (a.a>=0 && a.a<p.tracks) { ++model_.interactionEpoch; releaseNote(); model_.trackIndex=a.a; }
             break;
         case ActionType::NextProfile: selectProfile((model_.profileIndex+1)%profileCount()); break;
+        case ActionType::SelectProfile:
+            if (model_.page==Page::Profiles && a.a>=0 && static_cast<std::size_t>(a.a)<profileCount()) {
+                if (a.a!=model_.profileIndex) selectProfile(static_cast<std::size_t>(a.a));
+                else ++model_.interactionEpoch;
+                model_.page=Page::Link;
+            }
+            break;
+        case ActionType::ProfileMenuDelta:
+            if (model_.page==Page::Profiles && (a.a==-1 || a.a==1)) {
+                const int last=static_cast<int>((profileCount()-1)/8u)*8;
+                const int offset=std::max(0,std::min(last,int(model_.profileMenuOffset)+8*a.a));
+                if (offset!=model_.profileMenuOffset) {
+                    model_.profileMenuOffset=static_cast<uint8_t>(offset);
+                    ++model_.interactionEpoch;
+                }
+            }
+            break;
         case ActionType::NextControlBank: ++model_.interactionEpoch; model_.controlBank^=1; break;
         case ActionType::SetControl:
             if (a.a>=0 && a.a<4) setParameter(model_.trackIndex,a.a+model_.controlBank*4,a.b);
