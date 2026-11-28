@@ -44,10 +44,21 @@ class CompanionBridgeTests(unittest.TestCase):
     def test_only_companion_notes_make_release_responsibility(self):
         endpoint = MockMidi(echo=False)
         session = Session(endpoint, "token", "midi", "zaaggenz-native", authenticated=True)
-        for message in [cy(1, 99, 0, (1,)), cy(5, 99, 1, (0, 127)), cy(7, 98, 2, (60, 100))]:
-            session.handle({"type": "midi", "data": list(message)})
+        messages = [cy(1, 99, 0, (1,)), cy(5, 99, 1, (0, 127))]
+        for message in messages:
+            self.assertEqual(session.handle({"type": "midi", "data": list(message)}), [])
+        # A foreign Note is refused before forwarding, so the editor-only
+        # session must not acquire release responsibility for somebody else.
+        for foreign in (cy(7, 98, 2, (60, 100)), cy(7, 0, 2, (60, 100))):
+            self.assertEqual(session.handle({"type": "midi", "data": list(foreign)}),
+                             [{"type": "error", "message": "CY1 session differs; reconnect required"}])
+            self.assertEqual(list(endpoint.sent), messages)
+            self.assertFalse(session.companion_notes)
+            self.assertEqual(session.companion_sequence, 1)
         session.release()
-        self.assertEqual(len(endpoint.sent), 3)
+        self.assertEqual(list(endpoint.sent), messages)
+        session.release()
+        self.assertEqual(list(endpoint.sent), messages)
 
     def test_sequence_wrap_and_stale_commands_do_not_regress_panic(self):
         endpoint = MockMidi(echo=False)
