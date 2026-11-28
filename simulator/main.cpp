@@ -381,6 +381,7 @@ class Simulator {
     std::cout<<"]},\"eco\":{\"active\":"<<(ecoMode_?"true":"false")
       <<",\"origin\":\"native-engine\",\"running\":"<<(ev.running?"true":"false")
       <<",\"frozen\":"<<(ev.frozen?"true":"false")<<",\"preset\":"<<unsigned(ev.preset)
+      <<",\"arcActive\":"<<(ev.arcActive?"true":"false")<<",\"arcBlock\":"<<ev.arcBlock
       <<",\"fertility\":"<<unsigned(ev.fertility)<<",\"sharing\":"<<unsigned(ev.sharing)<<",\"pressure\":"<<unsigned(ev.pressure)
       <<",\"ticks\":"<<ev.ticks<<",\"births\":"<<ev.births<<",\"deaths\":"<<ev.deaths<<",\"gifts\":"<<ev.gifts
       <<",\"moves\":"<<ev.moves<<",\"consumed\":"<<ev.consumed<<",\"resources\":[";
