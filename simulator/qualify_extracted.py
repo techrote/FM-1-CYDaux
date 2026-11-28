@@ -18,6 +18,8 @@ import time
 from urllib.request import Request, urlopen
 import zipfile
 
+from package_contract import require_audio_rates, require_frame
+
 
 def verify_hashes(directory: Path) -> dict:
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
@@ -112,8 +114,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             if peak<=100:
                 raise RuntimeError("Extracted engine produced no meaningful audio")
             frame=get("/api/frame.png")
-            if not frame.startswith(b"\x89PNG\r\n\x1a\n"):
-                raise RuntimeError("Extracted renderer failed")
+            require_frame(frame, instrument)
             control("panic")
             quiet=post("/api/audio",{"frames":1024})[24:]
             if quiet!=bytes(2048):
@@ -145,8 +146,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
         if (magic,version,rate,frames)!=(b"CYDA",1,24000,4096) or peak<=100:
             raise RuntimeError("Extracted Chronomorph PCM failed")
         frame=get("/api/frame.png")
-        if not frame.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
-            raise RuntimeError("Extracted Chronomorph renderer failed")
+        require_frame(frame, "chronomorph-native")
         control("panic")
         if post("/api/audio",{"frames":1024})[24:]!=bytes(2048):
             raise RuntimeError("Extracted Chronomorph panic failed")
@@ -199,6 +199,7 @@ def main():
             (directory/"fm1-simulator").chmod(0o755)
         manifest=verify_hashes(directory)
         receipt=evaluate(directory,args.standalone)
+        require_audio_rates(manifest, receipt["instruments"])
         receipt["source_commit"]=manifest["source_commit"]
         receipt["archive_sha256"]=hashlib.sha256(archive.read_bytes()).hexdigest()
     encoded=json.dumps(receipt,indent=2)+"\n"

@@ -1,7 +1,7 @@
 # CYDaux Companion Studio
 
 This evaluator runs the actual shared C++ CYD controller, renderer and touch
-handling together with two real portable instrument engines. You can select
+handling together with four real portable instrument engines. You can select
 an instrument, play notes, change its sound, draw an XY gesture, edit a local
 step sequence and hear the resulting native-engine audio in your browser.
 
@@ -39,7 +39,7 @@ and notices; the repository contains the complete companion build.
 
 ## First sound
 
-1. Select **Xenoresonator** or **ZaaggenZ** in the instrument
+1. Select **Xenoresonator**, **ZaaggenZ** or **Grimoire** in the instrument
    dropdown. The studio selects and connects its native endpoint.
 2. Click **Enable sound**. Browser policy requires this user gesture before
    audio can start. Begin at a comfortable listening level.
@@ -62,6 +62,16 @@ performance. If the browser disappears without sending a release, the server
 stops the audio clock and panics after its 750 ms consumption lease expires.
 Re-enable sound after returning to the page.
 
+## Chronomorph native editor
+
+Click **Open Chronomorph native editor**, enable sound and tap **START**.
+Tap any active step in the three independent lanes to toggle it; use -LEN/+LEN
+to set lengths from 1 to 16. BPM, warp and variation controls and three scenes
+modify the actual local engine. STOP or Panic silences it. The clock bars and
+step/cycle values are native engine state, not FM-1 telemetry. Choose **Return
+to firmware profiles** to return to the common profile controls.
+This mode is desktop-only; it does not provide CY1 or hardware pattern editing.
+
 ## What is generating the sound?
 
 - **ZaaggenZ Native:** the pinned ZaaggenZ-FM1 portable procedural synthesis core,
@@ -74,13 +84,21 @@ Re-enable sound after returning to the page.
   24 kHz mono, with Ceramic, Woodglass, Alien metal and Membrane presets.
   Excitation, damping, coupling and material changes reach the actual core.
 
+- **Grimoire Native:** the pinned VIBEWARE Orbit Gate engine, 24 kHz mono.
+  Pitch/material XY gestures, three presets and real envelope/energy readings
+  drive a local procedural orbit view, not a reconstruction of oscillator phase.
+- **Chronomorph Native:** the pinned VIBEWARE polymetric clock engine, 24 kHz
+  mono. Three full-width pattern masks, tempo, warp, variation and clock state
+  are actual local engine controls and observations.
+
 The browser plays PCM produced by these C engines. It contains no substitute
 JavaScript synthesizer. It performs playback-rate conversion through Web Audio.
 The scheduling display shows this desktop player's current buffered audio and
 underruns, not BLE, USB, physical FM-1 latency or an ESP32 measurement.
 
-The on-screen state views use actual native-engine observations. Their six
-channels are ZaaggenZ role peaks or Xenoresonator modal magnitude proxies.
+The on-screen state views use actual native-engine observations. The
+profile meters include ZaaggenZ role peaks, Xenoresonator modal magnitude
+proxies and Grimoire envelope/energy; Chronomorph has a separate clock view.
 Transient maxima are retained between state replies; these are not calibrated
 acoustic measurements. No physical device is providing these values.
 
@@ -101,8 +119,8 @@ USB bridge have their own installation and acceptance procedures.
 `manifest.json` identifies the exact source revision and hashes the delivered
 files. `THIRD_PARTY.md`, `licenses/` and `third_party/` retain the engine source,
 license identities and exact upstream pins. Original ZaaggenZ code is MIT;
-Xenoresonator retains its owner-provided unspecified license identity. No new
-permissive grant is asserted for that engine.
+Xenoresonator, Grimoire and Chronomorph retain their owner-provided unspecified
+license identities. No new permissive grant is asserted for those engines.
 
 Passing this evaluator establishes software behavior for the named build. It
 does not establish physical CYD display/touch behavior, FM-1 installation,

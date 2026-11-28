@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 import zlib
 
 from run import Engine, ThreadingHTTPServer, command_for_request, find_binary, handler_factory, png_from_ppm
+from package_contract import require_frame
 
 
 class FrameAndRequestTests(unittest.TestCase):
@@ -16,6 +17,7 @@ class FrameAndRequestTests(unittest.TestCase):
         pixel = bytes((42, 196, 129))
         png = png_from_ppm(b"P6\n320 240\n255\n" + pixel * (320 * 240))
         self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
+        require_frame(png, "native renderer")
         offset = 8
         compressed = b""
         while offset < len(png):
