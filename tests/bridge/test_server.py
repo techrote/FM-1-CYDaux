@@ -318,6 +318,35 @@ class CompanionEpochSocketTests(unittest.TestCase):
         self.assertIsNone(self.peer.next())
         self.assertEqual(self.endpoint.sent[-1], cy(8, 99, 1))
 
+    def test_malformed_cy1_cannot_poison_release_sequence(self):
+        self.hello()
+        self.play(99)
+        # The actual C endpoint consumes a forward sequence before validating
+        # the operation/size. With delta 8191 the old emergency seq 2 is stale.
+        for message in (cy(5, 99, 8192, (0,)), cy(10, 99, 8192),
+                        cy(8, 99, 8192, (1,))):
+            self.send_cy(message)
+            self.assertEqual(self.peer.next(), {
+                "type": "error", "message": "Invalid CY1 operation or payload size"})
+        self.barrier()
+        self.assertEqual(list(self.endpoint.sent),
+                         [cy(1, 99, 0, (2,)), cy(7, 99, 1, (60, 100))])
+        self.peer.close()
+        for _ in range(10):
+            self.server.step(0.001)
+        self.assertEqual(self.endpoint.sent[-1], cy(8, 99, 2))
+        self.assertIsNone(self.server.client)
+
+    def test_non_cy1_sysex_and_other_version_are_not_filtered(self):
+        self.hello()
+        legacy = (0xF0, 0x7D, 0x46, 0x4C, 1, 0xF7)
+        future = list(cy(10, 99, 1))
+        future[4] = 2
+        self.send_cy(legacy)
+        self.send_cy(future)
+        self.barrier()
+        self.assertEqual(list(self.endpoint.sent), [legacy, tuple(future)])
+
     def test_initial_wait_is_not_a_lost_epoch(self):
         self.endpoint.connected = False
         self.endpoint.detail = "waiting for USB"
