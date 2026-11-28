@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/techrote/FM-1-VIBEWARE",
+  "revision": "feda1327f93f10b4070e8596cab09141c9203c4d",
+  "path": "instruments/ecophon",
+  "license": "LicenseRef-Owner-Provided-Unspecified",
+  "authority": "Owner-authorized issue-scoped integration; no general redistribution grant asserted.",
+  "files_git_blob_sha1": {
+    "ecophon.c": "b64a48903a0d7e6723e02ef1c360745292d9a84a",
+    "ecophon.h": "99425a68f9184999e05b3a8cceafe94a636e5fbe",
+    "profile.json": "cf10b36685a62b83ee972f189c2b201ce22408c9"
+  },
+  "modifications": "None; companion adapter separate."
+}
