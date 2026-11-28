@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 import zipfile
 
 from package_contract import require_audio_rates, require_frame
+from picker_witness import picker_witness
 
 
 def verify_hashes(directory: Path) -> dict:
@@ -204,6 +205,7 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             "frame_sha256":hashlib.sha256(frame).hexdigest(),
             "source_revision":state["audio"]["sourceRevision"],"full_width_xy":True,
             "touch_to_sound":True,"panic_silence":True,"native_only":True})
+        receipt["direct_picker"]=picker_witness(get, post, control, tap)
         receipt["result"]="PASS"
         return receipt
     finally:
