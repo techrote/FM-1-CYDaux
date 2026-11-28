@@ -31,7 +31,7 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 <div class="monitor"><div class="monitor-head"><h2>Companion transport monitor</h2><span id="counts" class="counters">TX 0 · RX 0</span></div><pre id="midi" class="midi">Local demo changes the interface without sending MIDI. Choose a mock connection to inspect messages.</pre></div>
 </section>
 <aside class="side">
-<section class="panel"><p class="eyebrow">Choose your instrument</p><label for="profile" class="mode-label">Firmware profile</label><select id="profile"><option>Loading…</option></select><div class="buttons"><button id="chronoMode">Open Chronomorph native editor</button></div><p id="description" class="description"></p><div id="version" class="version"></div><p id="setupHint" class="setup-hint"></p></section>
+<section class="panel"><p class="eyebrow">Choose your instrument</p><label for="profile" class="mode-label">Firmware profile</label><select id="profile"><option>Loading…</option></select><div class="buttons"><button id="chronoMode">Open Chronomorph native editor</button><button id="ecoMode">Open Ecophon native habitat</button></div><p id="description" class="description"></p><div id="version" class="version"></div><p id="setupHint" class="setup-hint"></p></section>
 <section class="panel"><p class="eyebrow">Connection &amp; sound</p><label for="transport" class="mode-label">Simulation mode</label><select id="transport"><option value="demo">Local demo · no MIDI</option><option value="ble">Mock Bluetooth MIDI</option><option value="wifi">Mock Wi-Fi bridge</option><option value="native">Actual native audio engine</option></select><div class="buttons"><button id="connect">Connect</button><button id="disconnect">Disconnect</button></div><label class="check"><input id="echo" type="checkbox" checked>Mock feedback (mock modes only)</label><div id="notice" class="notice" role="status"></div>
 <div class="buttons"><button id="audioStart">Enable sound</button><button id="panic">Panic</button></div>
 <label class="check" for="volume">Listening level <input id="volume" type="range" min="0" max="100" value="60" style="width:105px"></label>
@@ -39,7 +39,7 @@ button,select{font:inherit}button,select,a{touch-action:manipulation}button,sele
 <section class="panel"><p class="eyebrow">Current control bank</p><div id="values" class="values"></div><p class="small" style="margin-bottom:0">Unknown values stay blank until changed or received. “Sent” is a command; “Device” is returned state from a real connection. Mock replies stay “Demo”. “Native” is actual portable-engine readback on this computer.</p></section>
 </aside>
 </div>
-<footer class="footnote"><p>Legacy and companion profiles use the CYD firmware renderer. Chronomorph is a native-only editor using the same drawing primitives.</p><p>ZaaggenZ, Xenoresonator, Grimoire and Chronomorph generate actual native-core audio. No FM-1 CPU, radio or physical hardware is emulated.</p></footer>
+<footer class="footnote"><p>Legacy and companion profiles use the CYD firmware renderer. Chronomorph and Ecophon are native-only editors using the same drawing primitives.</p><p>ZaaggenZ, Xenoresonator, Grimoire, Chronomorph and Ecophon generate actual native-core audio. No FM-1 CPU, radio or physical hardware is emulated.</p></footer>
 </main>
 <div id="error" class="error" role="alert"></div>
 <script src="/audio.js"></script>
@@ -61,8 +61,9 @@ function frame(){const serial=++imageSerial;const image=new Image();image.onload
 function update(next){
  if(next.revision<revision||(state&&state.chrono&&next.chrono&&next.chrono.revision<state.chrono.revision))return;
  const wasChrono=!!(state&&state.chrono&&state.chrono.active);
+ const wasEco=!!(state&&state.eco&&state.eco.active);
  state=next;
- const chrono=!!(next.chrono&&next.chrono.active);
+ const chrono=!!(next.chrono&&next.chrono.active),eco=!!(next.eco&&next.eco.active);
  const ids=next.profiles.map(item=>item.id).join("|");
  if(profile.dataset.ids!==ids){profile.replaceChildren();next.profiles.forEach(item=>{const option=document.createElement("option");option.value=item.id;option.textContent=item.name;profile.appendChild(option);});profile.dataset.ids=ids;}
  profile.value=next.profile;transport.value=["demo","ble","wifi","native"][next.transport];
@@ -88,8 +89,10 @@ function update(next){
  if(next.midi.length){const log=document.getElementById("midi");const lines=next.midi.map(bytes=>bytes.map(value=>value.toString(16).toUpperCase().padStart(2,"0")).join(" "));const text=lines.join("\n");if(log.textContent!==text){log.textContent=text;log.scrollTop=log.scrollHeight;}}
  const chronoButton=document.getElementById("chronoMode");
  if(chronoButton)chronoButton.textContent=chrono?"Return to firmware profiles":"Open Chronomorph native editor";
- profile.disabled=chrono;transport.disabled=chrono;
- if(chrono){
+ const ecoButton=document.getElementById("ecoMode");
+ if(ecoButton)ecoButton.textContent=eco?"Return to firmware profiles":"Open Ecophon native habitat";
+ profile.disabled=chrono||eco;transport.disabled=chrono||eco;
+ if(chrono||eco){
   document.getElementById("audioStart").disabled=false;
   document.getElementById("connect").disabled=true;
   document.getElementById("disconnect").disabled=true;
@@ -100,12 +103,18 @@ function update(next){
   document.getElementById("notice").textContent=next.chrono.playing?"Native clock running":"Native clock stopped";
   document.querySelectorAll("[data-page]").forEach(button=>button.disabled=true);
   values.replaceChildren();
+  if(eco){
+   document.getElementById("description").textContent="Ecophon: local native habitat. Enable sound, then tap START. No FM-1 endpoint.";
+   document.getElementById("version").textContent="Actual local engine · 8 agent slots / 4 resource patches";
+   document.getElementById("setupHint").textContent="XY fertility/pressure, sharing slider, ecology freeze and four presets.";
+   document.getElementById("notice").textContent=next.eco.running?"Native ecology running":"Native ecology stopped";
+  }
  }
- if(next.revision!==revision||chrono||wasChrono!==chrono){revision=next.revision;frame();}
+ if(next.revision!==revision||chrono||eco||wasChrono!==chrono||wasEco!==eco){revision=next.revision;frame();}
 }
 function post(path,body){queue=queue.then(()=>request(path,body)).then(update).catch(showError);return queue;}
 function control(name,value){
- if(["profile","transport","disconnect","panic","preset","chrono"].includes(name)&&typeof audioPlayer!=="undefined")audioPlayer.flush();
+ if(["profile","transport","disconnect","panic","preset","chrono","eco"].includes(name)&&typeof audioPlayer!=="undefined")audioPlayer.flush();
  return post("/api/control",{name:name,value:value||""});
 }
 function point(event){const box=screen.getBoundingClientRect();return{x:Math.round((event.clientX-box.left)*320/box.width),y:Math.round((event.clientY-box.top)*240/box.height)};}
@@ -133,7 +142,14 @@ document.querySelectorAll("[data-page]").forEach(button=>button.addEventListener
 const chronoToggle=document.getElementById("chronoMode");
 if(chronoToggle)chronoToggle.addEventListener("click",async()=>{
  if(audioPlayer.running||audioPlayer.starting)await audioPlayer.stop();
+ activePointer=null;pendingMove=null;await touch("cancel");
  await control("chrono",state&&state.chrono&&state.chrono.active?"off":"on");
+});
+const ecoToggle=document.getElementById("ecoMode");
+if(ecoToggle)ecoToggle.addEventListener("click",async()=>{
+ if(audioPlayer.running||audioPlayer.starting)await audioPlayer.stop();
+ activePointer=null;pendingMove=null;await touch("cancel");
+ await control("eco",state&&state.eco&&state.eco.active?"off":"on");
 });
 profile.addEventListener("change",async()=>{
  await control("profile",profile.value);
@@ -148,8 +164,8 @@ document.getElementById("audioStart").addEventListener("click",async()=>{
  const button=document.getElementById("audioStart");button.disabled=true;
  try{
   if(audioPlayer.running){await audioPlayer.stop();}
-  else{if(!(state.chrono&&state.chrono.active)){if(state.transport!==3)await control("transport","native");if(state.connection!==2)await control("connect");}await audioPlayer.start();}
- }catch(error){showError(error);}finally{button.disabled=!(state&&(state.nativeSupported||(state.chrono&&state.chrono.active)));}
+  else{if(!((state.chrono&&state.chrono.active)||(state.eco&&state.eco.active))){if(state.transport!==3)await control("transport","native");if(state.connection!==2)await control("connect");}await audioPlayer.start();}
+ }catch(error){showError(error);}finally{button.disabled=!(state&&(state.nativeSupported||((state.chrono&&state.chrono.active)||(state.eco&&state.eco.active))));}
 });
 document.getElementById("volume").addEventListener("input",event=>audioPlayer.setVolume(Number(event.target.value)/100));
 document.getElementById("panic").addEventListener("click",()=>control("panic"));
@@ -157,7 +173,7 @@ document.getElementById("connect").addEventListener("click",()=>control("connect
 document.getElementById("disconnect").addEventListener("click",()=>control("disconnect"));
 document.getElementById("echo").addEventListener("change",event=>control("echo",event.target.checked?"on":"off"));
 document.addEventListener("keydown",event=>{
- if((state&&state.chrono&&state.chrono.active)||["INPUT","SELECT","BUTTON","TEXTAREA"].includes(event.target.tagName)||event.repeat)return;
+ if((state&&((state.chrono&&state.chrono.active)||(state.eco&&state.eco.active)))||["INPUT","SELECT","BUTTON","TEXTAREA"].includes(event.target.tagName)||event.repeat)return;
  if(event.code==="Space"&&state&&!state.setupActive){event.preventDefault();if(!spaceHeld&&activePointer===null){spaceHeld=true;if(state.companionEnabled)keyboardNote(state.velocity||100);else{const p=state.page===2?{x:270,y:80}:{x:160,y:177};if(state.page===0||state.page===2)touch("down",p);}}}
  const index=["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6"].indexOf(event.code);if(index>=0){event.preventDefault();control("page",pageNames[index]);}
 });

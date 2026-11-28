@@ -157,6 +157,35 @@ def evaluate(directory: Path, standalone: bool = False) -> dict:
             "frame_sha256":hashlib.sha256(frame).hexdigest(),
             "source_revision":state["audio"]["sourceRevision"],"high_bit_edit":True,
             "touch_to_sound":True,"panic_silence":True,"native_only":True})
+        state=control("eco","on")
+        if not state["eco"]["active"] or state["eco"]["origin"]!="native-engine":
+            raise RuntimeError("Extracted Ecophon habitat unavailable")
+        edited=tap(153,158)
+        if (edited["eco"]["fertility"],edited["eco"]["pressure"])!=(255,255):
+            raise RuntimeError("Extracted Ecophon XY edit failed")
+        tap(45,193)  # reset to Mutualism for actual audio witness
+        control("audio-clock","on")
+        state=tap(45,220)
+        if not state["eco"]["running"]:
+            raise RuntimeError("Extracted Ecophon start failed")
+        block=post("/api/audio",{"frames":4096})
+        magic,version,rate,generation,serial,frames=struct.unpack("<4sIIIII",block[:24])
+        pcm=struct.unpack("<4096h",block[24:])
+        peak=max(abs(v) for v in pcm)
+        if (magic,version,rate,frames)!=(b"CYDA",1,24000,4096) or peak<=100:
+            raise RuntimeError("Extracted Ecophon PCM failed")
+        frame=get("/api/frame.png")
+        require_frame(frame,"ecophon-native")
+        control("panic")
+        if post("/api/audio",{"frames":1024})[24:]!=bytes(2048):
+            raise RuntimeError("Extracted Ecophon panic failed")
+        control("audio-clock","off")
+        control("eco","off")
+        receipt["instruments"].append({"id":"ecophon-native","rate":rate,"peak":peak,
+            "pcm_sha256":hashlib.sha256(block[24:]).hexdigest(),
+            "frame_sha256":hashlib.sha256(frame).hexdigest(),
+            "source_revision":state["audio"]["sourceRevision"],"full_width_xy":True,
+            "touch_to_sound":True,"panic_silence":True,"native_only":True})
         receipt["result"]="PASS"
         return receipt
     finally:

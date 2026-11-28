@@ -128,6 +128,47 @@ class NativeIntegrationTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=3)
 
+    def test_ecophon_native_habitat_and_lifecycle(self):
+        def tap(x, y):
+            return self.engine.command(f"tap {x} {y}")
+        state = self.engine.command("eco on")
+        self.assertTrue(state["eco"]["active"])
+        self.assertFalse(state["chrono"]["active"])
+        self.assertEqual(state["eco"]["origin"], "native-engine")
+        self.assertEqual(state["audio"]["sampleRate"], 24000)
+        self.assertEqual(len(state["eco"]["agents"]), 8)
+        self.assertEqual(len(state["eco"]["resources"]), 4)
+        before = self.engine.frame()
+        state = tap(153, 158)
+        self.assertEqual((state["eco"]["fertility"], state["eco"]["pressure"]), (255, 255))
+        state = tap(311, 120)
+        self.assertEqual(state["eco"]["sharing"], 255)
+        self.assertNotEqual(self.engine.frame(), before)
+        self.engine.command("down 170 145")
+        self.engine.command("cancel")
+        state = self.engine.command("up 170 145")
+        self.assertFalse(state["eco"]["frozen"])
+        self.assertFalse(tap(45, 220)["eco"]["running"])
+        self.engine.command("audio-clock on")
+        self.assertTrue(tap(45, 220)["eco"]["running"])
+        pcm = b"".join(self.engine.audio(4096)[24:] for _ in range(8))
+        self.assertNotEqual(pcm, bytes(len(pcm)))
+        live = self.engine.state
+        self.assertGreater(live["eco"]["ticks"], 0)
+        self.assertTrue(all(0 <= x <= 4096 for x in live["eco"]["resources"]))
+        generation = live["audio"]["generation"]
+        self.engine.command("panic")
+        self.assertNotEqual(self.engine.state["audio"]["generation"], generation)
+        self.assertEqual(self.engine.audio(1024)[24:], bytes(2048))
+        self.assertEqual(self.engine.state["eco"]["ticks"], live["eco"]["ticks"])
+        self.engine.command("down 45 220")
+        self.engine.command("chrono on")
+        self.engine.command("eco on")
+        self.assertFalse(self.engine.command("up 45 220")["eco"]["running"])
+        self.engine.command("eco off")
+        self.engine.command("profile melodee")
+        self.assertEqual(self.engine.state["profile"], "melodee")
+
     def test_chronomorph_native_editor_pcm_and_lifecycle(self):
         def tap(x, y):
             return self.engine.command(f"tap {x} {y}")

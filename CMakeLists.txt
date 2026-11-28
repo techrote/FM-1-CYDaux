@@ -67,8 +67,10 @@ endif()
 add_test(NAME chrono_adapter_test COMMAND chrono_adapter_test)
 
 # Ecophon: host-only bounded semantic adapter; no DSP in ESP32 firmware.
-add_library(fm1eco simulator/eco_adapter.cpp third_party/ecophon/ecophon.c)
+add_library(fm1eco simulator/eco_adapter.cpp simulator/eco_panel.cpp third_party/ecophon/ecophon.c)
 target_include_directories(fm1eco PUBLIC simulator third_party/ecophon)
+target_link_libraries(fm1eco PUBLIC fm1core)
+target_link_libraries(fm1-simulator PRIVATE fm1eco)
 add_executable(eco_adapter_test simulator/eco_adapter_test.cpp)
 target_link_libraries(eco_adapter_test PRIVATE fm1eco)
 if(MSVC)
