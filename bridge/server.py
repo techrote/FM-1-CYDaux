@@ -130,8 +130,19 @@ class Session:
                 # it refuses an unknown operation or wrong payload size.
                 # Reject these locally before forwarding so release tracking
                 # cannot diverge. Other SysEx namespaces/versions are unchanged.
-                if message[:6] == CY1_PREFIX and not valid_cy1_envelope(message):
-                    raise ValueError("Invalid CY1 operation or payload size")
+                if message[:6] == CY1_PREFIX:
+                    if not valid_cy1_envelope(message):
+                        raise ValueError("Invalid CY1 operation or payload size")
+                    # An authenticated TCP lifetime owns exactly one CY1 epoch.
+                    # An old firmware lease can outlive a dropped TCP socket:
+                    # a forward Note before a new Discover would otherwise
+                    # sound without the new socket owning emergency release.
+                    session = sum(message[7 + i] << (7 * i) for i in range(4))
+                    if not session or (self.companion_session
+                                       and session != self.companion_session):
+                        raise ValueError("CY1 session differs; reconnect required")
+                    if not self.companion_session and message[6] != 1:
+                        raise ValueError("CY1 discovery required on this connection")
                 self.endpoint.send(message)
                 self._observe_companion(message)
                 # A CC-only editor session must not silence somebody else's
