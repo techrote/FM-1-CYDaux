@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cmath>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -78,7 +79,7 @@ class Simulator {
           ui_.cancelTouch();controller_.dispatch({fm1::ActionType::Panic});
           controller_.dispatch({fm1::ActionType::Disconnect});settle();
           chrono_.disconnect();chronoPanel_.cancel();sampleClock_=false;sampleRemainder_=0;
-          chronoMode_=mode=="on";++chronoGeneration_;++chronoRevision_;
+          chronoMode_=mode=="on";chronoPeak_=0;chronoRms_=0;chronoFrames_=0;++chronoGeneration_;++chronoRevision_;
           if(chronoMode_)chrono_.reset(1,0);
         }
       }else if(chronoMode_ && name!="down"&&name!="move"&&name!="up"&&name!="tap"&&name!="cancel"&&name!="tick"&&name!="state"&&name!="frame"&&name!="audio"&&name!="audio-clock"&&name!="panic"&&name!="disconnect"){
@@ -160,6 +161,13 @@ class Simulator {
         // double-advance the sequencer. Event quantum <=128 engine samples.
         if(chronoMode_){
           if(!chrono_.render(audio_.data(),count))throw std::runtime_error("Chronomorph render refused");
+          uint64_t squares=0;unsigned peak=0;
+          for(unsigned i=0;i<count;++i){
+            const int value=audio_[i];
+            peak=std::max(peak,static_cast<unsigned>(value<0?-value:value));
+            squares+=static_cast<uint64_t>(static_cast<int64_t>(value)*value);
+          }
+          chronoPeak_=peak;chronoRms_=std::sqrt(static_cast<double>(squares)/count)/32768.0;
           chronoFrames_+=count;++chronoRevision_;
         }else for(unsigned offset=0;offset<count;offset+=128) {
           const unsigned chunk=std::min(128u,count-offset);
@@ -215,11 +223,13 @@ class Simulator {
   bool chronoMode_=false;
   uint32_t chronoGeneration_=0x80000000u;
   uint64_t chronoRevision_=0,chronoFrames_=0;
-  void stopChrono(){chrono_.stop();chronoPanel_.cancel();++chronoGeneration_;++chronoRevision_;}
+  unsigned chronoPeak_=0;
+  double chronoRms_=0;
+  void stopChrono(){chrono_.stop();chronoPanel_.cancel();chronoPeak_=0;chronoRms_=0;++chronoGeneration_;++chronoRevision_;}
   void chronoTouch(fm1::TouchPhase phase,int x,int y){
     const auto change=chronoPanel_.touch(phase,x,y,chrono_,sampleClock_);
     if(change!=fm1::ChronoPanel::Change::None)++chronoRevision_;
-    if(change==fm1::ChronoPanel::Change::Flush)++chronoGeneration_;
+    if(change==fm1::ChronoPanel::Change::Flush){chronoPeak_=0;chronoRms_=0;++chronoGeneration_;}
   }
   std::array<int16_t,fm1::VirtualInstrument::kMaximumFrames> audio_{};
   bool nativeConnected_=false,sampleClock_=false;
@@ -312,7 +322,7 @@ class Simulator {
       <<",\"generation\":"<<(chronoMode_?chronoGeneration_:instrument_.generation())
       <<",\"clockRunning\":"<<(sampleClock_?"true":"false")
       <<",\"frames\":"<<(chronoMode_?chronoFrames_:instrument_.renderedFrames())
-      <<",\"peak\":"<<(chronoMode_?0:instrument_.peak())<<",\"rms\":"<<(chronoMode_?0:instrument_.rms())
+      <<",\"peak\":"<<(chronoMode_?chronoPeak_:instrument_.peak())<<",\"rms\":"<<(chronoMode_?chronoRms_:instrument_.rms())
       <<",\"rejected\":"<<instrument_.rejected()
       <<",\"queueOverflows\":"<<instrument_.queueOverflows()<<'}'
       <<",\"tx\":"<<m.transmitted<<",\"rx\":"<<m.received<<",\"revision\":"<<m.revision

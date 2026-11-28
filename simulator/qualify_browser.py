@@ -117,6 +117,40 @@ def exercise_browser(playwright, args, base, receipt):
             })
             save_receipt(args.output, receipt)
 
+        receipt["stage"] = "chronomorph-native: actual touchscreen editor"
+        page.click("#chronoMode")
+        page.wait_for_function("state.chrono.active && !state.chrono.playing")
+        box = page.locator("#screen").bounding_box()
+        def chrono_tap(x, y):
+            page.mouse.click(box["x"] + x * box["width"] / 320,
+                             box["y"] + y * box["height"] / 240)
+        for length in range(8, 17):
+            chrono_tap(290, 30)
+            page.wait_for_function("n => state.chrono.lanes[0].length===n", arg=length)
+        chrono_tap(301, 48)
+        page.wait_for_function("state.chrono.lanes[0].mask & 32768")
+        page.click("#audioStart")
+        page.wait_for_function("audioPlayer.running && state.audio.clockRunning")
+        before = page.evaluate("window.__pcm.nonzero")
+        chrono_tap(45, 220)
+        page.wait_for_function("state.chrono.playing && state.chrono.lanes[0].ticks>3")
+        page.wait_for_function("n => window.__pcm.nonzero>n", arg=before)
+        stats = page.evaluate("""({source:state.audio, lanes:state.chrono.lanes,
+            nodes:audioPlayer.nodes.size, ahead:audioPlayer.nextTime-audioPlayer.context.currentTime,
+            blocks:audioPlayer.blocks, underruns:audioPlayer.underruns, pcm:window.__pcm})""")
+        if stats["nodes"]>12 or stats["ahead"]>0.25 or not stats["pcm"]["finite"]:
+            raise RuntimeError("Chronomorph Web Audio exceeded bounds")
+        page.screenshot(path=str(args.output / "chronomorph-native-browser.png"), full_page=True)
+        page.click("#panic")
+        page.wait_for_function("!state.chrono.playing")
+        page.click("#audioStart")
+        page.wait_for_function("!audioPlayer.running && !state.audio.clockRunning && audioPlayer.nodes.size===0")
+        page.click("#chronoMode")
+        page.wait_for_function("!state.chrono.active")
+        receipt["instruments"].append({"id":"chronomorph-native","software_web_audio":stats,
+            "high_bit_edit":True,"native_clock":True,"stop_flush":True})
+        save_receipt(args.output, receipt)
+
         receipt["stage"] = "responsive browser shell"
         # The responsive shell still hosts the exact 320x240 framebuffer.
         page.set_viewport_size({"width": 390, "height": 844})

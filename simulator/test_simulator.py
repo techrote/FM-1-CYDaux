@@ -152,6 +152,10 @@ class NativeIntegrationTests(unittest.TestCase):
         self.assertTrue(running["chrono"]["playing"])
         pcm = b"".join(self.engine.audio(4096)[24:] for _ in range(16))
         self.assertNotEqual(pcm, bytes(len(pcm)))
+        # Metrics describe the actual most recent native PCM block.
+        samples = struct.unpack("<4096h", pcm[-8192:])
+        self.assertEqual(self.engine.state["audio"]["peak"], max(abs(x) for x in samples))
+        self.assertAlmostEqual(self.engine.state["audio"]["rms"], (sum(x*x for x in samples)/len(samples))**0.5/32768, places=5)
         live = self.engine.state["chrono"]
         self.assertGreater(live["lanes"][0]["ticks"], 0)
         self.assertNotEqual(live["lanes"][0]["ticks"], live["lanes"][1]["ticks"])
